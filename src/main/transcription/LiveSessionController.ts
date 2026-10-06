@@ -113,6 +113,17 @@ export class LiveSessionController {
         suppressed: result.suppressed,
         context: result.context,
       });
+      // Semantic path is async and optional — never delays the broadcast above
+      detector.scheduleSemanticSuggestions(text, result, (semantic) => {
+        if (semantic.length === 0) return;
+        this.broadcast(SttIpcEvents.DETECTIONS, {
+          source: "semantic",
+          transcript: text,
+          detections: semantic,
+          suppressed: [],
+          context: result.context,
+        });
+      });
     } catch (err) {
       logger.warn("Detection after STT final failed", {
         error: err instanceof Error ? err.message : String(err),

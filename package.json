@@ -18,7 +18,57 @@
     "bible:import": "npm run rebuild:node && tsx scripts/bible/import-usfm.ts",
     "rebuild:node": "npm rebuild better-sqlite3",
     "rebuild:native": "electron-rebuild -f -w better-sqlite3",
-    "postinstall": "npm run rebuild:node || true"
+    "postinstall": "npm run rebuild:node || true",
+    "pack": "npm run build && npm run rebuild:native && electron-builder --dir",
+    "dist:win": "npm run build && npm run rebuild:native && electron-builder --win --x64"
+  },
+  "build": {
+    "appId": "ai.verseflow.app",
+    "productName": "VerseFlow AI",
+    "copyright": "Copyright © VerseFlow AI",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "package.json",
+      "!**/*.map"
+    ],
+    "extraResources": [
+      {
+        "from": "resources",
+        "to": "resources",
+        "filter": [
+          "**/*",
+          "!bible/raw/**",
+          "!bible/raw"
+        ]
+      }
+    ],
+    "asar": true,
+    "asarUnpack": [
+      "**/node_modules/better-sqlite3/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "${productName}-${version}-win-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "VerseFlow AI"
+    }
   },
   "dependencies": {
     "@google-cloud/speech": "^8.1.1",

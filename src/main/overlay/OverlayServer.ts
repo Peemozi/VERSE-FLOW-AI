@@ -4,6 +4,7 @@ import path from "node:path";
 import { WebSocketServer, type WebSocket } from "ws";
 import type { LiveScripturePayload } from "../vmix/BroadcastOutput";
 import { logger } from "../security/logger";
+import { getResourcesRoot } from "../paths";
 
 export type OverlayThemeId =
   | "clean-lower-third"
@@ -27,6 +28,7 @@ export interface OverlayServerConfig {
 
 function resolveOverlayDir(): string {
   const candidates = [
+    path.join(getResourcesRoot(), "overlay"),
     path.join(process.cwd(), "resources", "overlay"),
     path.join(__dirname, "../../../resources/overlay"),
   ];

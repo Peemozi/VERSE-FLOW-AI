@@ -29,6 +29,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
     quotationEnabled: true,
     quotationMinChars: 40,
     quotationMinWords: 6,
+    semanticEnabled: false,
+    semanticMinConfidence: 0.85,
   },
   vmix: {
     host: "127.0.0.1",

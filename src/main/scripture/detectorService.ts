@@ -3,7 +3,10 @@ import { BibleRepository } from "../database/BibleRepository";
 import { getDatabase } from "../database/connection";
 import { loadSettings } from "../settings/store";
 import type { AliasLanguage } from "./bookAliasEngine";
+import { createEmbeddingProvider } from "./EmbeddingProvider";
 import { QuotationDetector } from "./QuotationDetector";
+import { createReferenceInterpretationProvider } from "./ReferenceInterpretationProvider";
+import { SemanticMatcher } from "./SemanticMatcher";
 import { ScriptureDetector } from "./ScriptureDetector";
 
 let detector: ScriptureDetector | null = null;
@@ -46,10 +49,22 @@ function buildDetector(): ScriptureDetector {
     },
   });
 
+  const semanticMatcher = new SemanticMatcher({
+    embedding: createEmbeddingProvider(),
+    interpreter: createReferenceInterpretationProvider(),
+    enabled: settings.detection.semanticEnabled,
+    minConfidence: settings.detection.semanticMinConfidence,
+    translationId,
+    verseExists: (bookId, chapter, verse) =>
+      Boolean(repo.getVerse(translationId, bookId, chapter, verse)),
+    getVerse: (tid, bookId, chapter, verse) => repo.getVerse(tid, bookId, chapter, verse),
+  });
+
   return new ScriptureDetector({
     translationId,
     languages: languagesForMode(settings.general.languageMode),
     quotationDetector,
+    semanticMatcher,
     verseExists: (bookId, chapter, verse) => {
       const anyVerses = repo.listTranslations().some((t) => t.verseCount > 0);
       if (!anyVerses) return true;
@@ -71,6 +86,10 @@ export function getScriptureDetector(): ScriptureDetector {
       enabled: settings.detection.quotationEnabled,
       minChars: settings.detection.quotationMinChars,
       minSignificantWords: settings.detection.quotationMinWords,
+    });
+    detector.updateSemanticConfig({
+      enabled: settings.detection.semanticEnabled,
+      minConfidence: settings.detection.semanticMinConfidence,
     });
   }
   return detector;

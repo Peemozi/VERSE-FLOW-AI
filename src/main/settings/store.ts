@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { DEFAULT_SETTINGS, type AppSettings } from "../../shared/constants/app";
 import { parseSettings } from "../../shared/schemas";
-import { getUserDataPath } from "../database/connection";
+import { getUserDataPath } from "../paths";
 import { logger } from "../security/logger";
 
 const SETTINGS_FILE = "settings.json";

@@ -94,7 +94,7 @@ Canonical book IDs are language-neutral (`GEN`, `JHN`, `1CO`, …). Verses store
 
 ## Phase boundary
 
-Phases 1–8 ship foundation through Yoruba hardening and FTS5 quotation suggestions. Semantic detection and packaging are later — see [ROADMAP.md](./ROADMAP.md).
+Phases 1–10 ship the MVP through Windows packaging. Guided first-run Bible import UI is optional polish — see [ROADMAP.md](./ROADMAP.md).
 
 ## Output adapters (Phase 6)
 
@@ -120,3 +120,17 @@ See [YORUBA_SUPPORT.md](./YORUBA_SUPPORT.md).
 - `QuotationDetector` + sentence buffer — runs *after* direct/contextual parsing
 - Suggestions in operator UI unless confidence ≥ `quotationMinConfidence` (default 0.9)
 - Generic / short phrases never trigger
+
+## Semantic (Phase 9 — optional)
+
+- `EmbeddingProvider` / `ReferenceInterpretationProvider` interfaces with no-op defaults
+- `SemanticMatcher.schedule` — async only; feature flag `semanticEnabled` default **OFF**
+- LLM interpretations must pass `validateInterpretedReferences` against local Bible DB
+- See [SEMANTIC_SEARCH.md](./SEMANTIC_SEARCH.md)
+
+## Packaging (Phase 10)
+
+- electron-builder NSIS x64 (`npm run dist:win`)
+- Writable state under Electron `userData` / AppData via `ensureAppDataLayout`
+- Bundled `resources/` as `extraResources` (aliases, overlay, numbers)
+- See [PACKAGING.md](./PACKAGING.md)

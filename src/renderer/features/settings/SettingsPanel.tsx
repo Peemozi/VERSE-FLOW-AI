@@ -179,6 +179,28 @@ export function SettingsPanel() {
             <option value="no">Disabled</option>
           </select>
         </div>
+        <div className="space-y-1">
+          <Label htmlFor="semantic-enabled">Semantic matching</Label>
+          <select
+            id="semantic-enabled"
+            className="flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+            value={settings.detection.semanticEnabled ? "yes" : "no"}
+            onChange={(e) =>
+              patch({
+                detection: {
+                  ...settings.detection,
+                  semanticEnabled: e.target.value === "yes",
+                },
+              })
+            }
+          >
+            <option value="no">Disabled (default)</option>
+            <option value="yes">Enabled (async; needs embedding model)</option>
+          </select>
+          <p className="text-[11px] text-muted-foreground">
+            Optional. Stub provider until a model is bundled — see docs/SEMANTIC_SEARCH.md.
+          </p>
+        </div>
 
         <div className="md:col-span-3 border-t border-border/40 pt-3">
           <h3 className="mb-2 text-sm font-semibold tracking-wide text-foreground">VMIX</h3>

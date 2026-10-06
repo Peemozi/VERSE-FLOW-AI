@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { CANONICAL_BOOKS, type CanonicalBookId } from "../../shared/scripture/books";
 import { asrFoldForMatch, normalizeForMatch } from "./yorubaNormalizer";
+import { getResourcesRoot } from "../paths";
 
 export type AliasLanguage = "en" | "yo";
 export type AliasSource = "verified" | "uncertain" | "asr" | "canonical";
@@ -40,6 +41,7 @@ function aliasesFromValue(value: unknown): string[] {
 
 function resourcePaths(filename: string): string[] {
   return [
+    path.join(getResourcesRoot(), "aliases", filename),
     path.join(process.cwd(), "resources", "aliases", filename),
     path.join(__dirname, "../../../resources/aliases", filename),
   ];

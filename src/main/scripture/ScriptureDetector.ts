@@ -11,6 +11,7 @@ import { digitizeSpokenNumbers } from "./numberNormalizer";
 import { validateAgainstDb } from "./referenceValidator";
 import { QuotationDetector } from "./QuotationDetector";
 import type { QuotationSettings } from "./quotationMatcher";
+import type { SemanticCandidate, SemanticMatcher } from "./SemanticMatcher";
 
 export interface DetectionEvent {
   id: string;
@@ -54,6 +55,8 @@ export interface ScriptureDetectorOptions {
   /** Optional quotation detector — when omitted, quotation path is skipped. */
   quotationDetector?: QuotationDetector | null;
   quotationSettings?: Partial<QuotationSettings>;
+  /** Optional semantic matcher — scheduled async only; never awaited in processTranscript. */
+  semanticMatcher?: SemanticMatcher | null;
 }
 
 let idSeq = 0;
@@ -77,6 +80,7 @@ export class ScriptureDetector {
   private verseExists?: ScriptureDetectorOptions["verseExists"];
   private getVerseFn?: ScriptureDetectorOptions["getVerse"];
   private quotationDetector: QuotationDetector | null;
+  private semanticMatcher: SemanticMatcher | null;
 
   constructor(options: ScriptureDetectorOptions = {}) {
     this.context = new ContextTracker({ ttlMs: options.contextTtlMs });
@@ -87,6 +91,7 @@ export class ScriptureDetector {
     this.verseExists = options.verseExists;
     this.getVerseFn = options.getVerse;
     this.quotationDetector = options.quotationDetector ?? null;
+    this.semanticMatcher = options.semanticMatcher ?? null;
     if (this.quotationDetector && options.quotationSettings) {
       this.quotationDetector.updateSettings(options.quotationSettings);
     }
@@ -101,6 +106,7 @@ export class ScriptureDetector {
   setTranslationId(id: string): void {
     this.translationId = id;
     this.quotationDetector?.setTranslationId(id);
+    this.semanticMatcher?.updateConfig({ translationId: id });
   }
 
   setLanguages(languages: AliasLanguage[]): void {
@@ -111,8 +117,54 @@ export class ScriptureDetector {
     this.quotationDetector = detector;
   }
 
+  setSemanticMatcher(matcher: SemanticMatcher | null): void {
+    this.semanticMatcher = matcher;
+  }
+
   updateQuotationSettings(partial: Partial<QuotationSettings>): void {
     this.quotationDetector?.updateSettings(partial);
+  }
+
+  updateSemanticConfig(partial: { enabled?: boolean; minConfidence?: number }): void {
+    this.semanticMatcher?.updateConfig(partial);
+  }
+
+  /**
+   * Schedule optional semantic suggestions. Never blocks; safe when disabled/stub.
+   * Callers (live STT / simulation) may push results to the UI asynchronously.
+   */
+  scheduleSemanticSuggestions(
+    transcript: string,
+    excludeFromResult: PipelineProcessResult,
+    onResult: (events: DetectionEvent[]) => void,
+  ): void {
+    if (!this.semanticMatcher?.isEnabled()) return;
+    const exclude = new Set(
+      excludeFromResult.detections.map((d) => `${d.bookId}:${d.chapter}:${d.verse}`),
+    );
+    this.semanticMatcher.schedule(transcript, exclude, (cands) => {
+      onResult(cands.map((c) => this.semanticCandidateToEvent(c, transcript)));
+    });
+  }
+
+  private semanticCandidateToEvent(c: SemanticCandidate, transcript: string): DetectionEvent {
+    return {
+      id: nextId(),
+      method: "semantic",
+      bookId: c.bookId,
+      chapter: c.chapter,
+      verse: c.verse,
+      endVerse: c.endVerse,
+      confidence: c.confidence,
+      transcriptSnippet: transcript.trim(),
+      rawMatch: c.rawMatch,
+      referenceLabel: c.referenceLabel,
+      translationId: c.translationId || this.translationId,
+      verseText: c.verseText,
+      suppressed: false,
+      createdAt: new Date().toISOString(),
+      isSuggestion: true,
+    };
   }
 
   processTranscript(transcript: string, now = Date.now()): PipelineProcessResult {

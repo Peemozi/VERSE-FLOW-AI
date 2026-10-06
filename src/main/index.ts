@@ -11,6 +11,7 @@ import {
   getOutputController,
   shutdownOutputController,
 } from "./vmix/OutputController";
+import { ensureAppDataLayout } from "./paths";
 
 const isDev = !app.isPackaged && process.env.NODE_ENV !== "production";
 
@@ -62,12 +63,22 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  app.setName(APP_NAME);
+
+  const layout = ensureAppDataLayout();
   const settings = loadSettings();
   logger.setLevel(settings.advanced.logLevel);
-  logger.info(`${APP_NAME} starting`, { version: app.getVersion(), isDev });
+  logger.info(`${APP_NAME} starting`, {
+    version: app.getVersion(),
+    isDev,
+    isPackaged: layout.isPackaged,
+    isFirstRun: layout.isFirstRun,
+    userData: layout.root,
+    dbPath: layout.dbPath,
+  });
 
-  openDatabase();
-  const repo = new BibleRepository(openDatabase());
+  openDatabase(layout.dbPath);
+  const repo = new BibleRepository(openDatabase(layout.dbPath));
   repo.seedCanonicalBooks();
 
   registerIpcHandlers();

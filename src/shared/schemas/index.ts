@@ -39,6 +39,9 @@ export const AppSettingsSchema = z.object({
     quotationEnabled: z.boolean(),
     quotationMinChars: z.number().int().positive(),
     quotationMinWords: z.number().int().positive(),
+    /** Optional semantic / embedding path — default OFF; never required for core. */
+    semanticEnabled: z.boolean(),
+    semanticMinConfidence: z.number().min(0).max(1),
   }),
   vmix: z.object({
     host: z.string().min(1),

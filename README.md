@@ -2,7 +2,7 @@
 
 AI-powered church scripture presentation for Windows. Listens for spoken Bible references (English / Yoruba), resolves them against a local Bible database, and drives operator Preview/Live workflow toward vMix and a browser overlay.
 
-**Phase status:** Phases 1–8 implemented (foundation through quotation detection). Semantic detection and packaging come next.
+**Phase status:** Phases 1–10 implemented (MVP through Windows packaging config). Guided first-run import wizard remains optional polish.
 
 ## Stack
 
@@ -62,11 +62,20 @@ Configured centrally in `src/shared/constants/app.ts` as **VerseFlow AI**.
 - [Transcription](docs/TRANSCRIPTION.md)
 - [vMix integration](docs/VMIX_INTEGRATION.md)
 - [Yoruba support](docs/YORUBA_SUPPORT.md)
+- [Semantic search (optional)](docs/SEMANTIC_SEARCH.md)
+- [Packaging](docs/PACKAGING.md)
 - [Testing](docs/TESTING.md)
 - [Security](docs/SECURITY.md)
 - [Third-party licences](THIRD_PARTY_LICENSES.md)
 
-## Phases (next)
+### Packaging (Windows)
 
-9 · Semantic detection  
-10 · Packaging (electron-builder)
+```bash
+npm run dist:win   # NSIS installer under ./release/
+```
+
+See [docs/PACKAGING.md](docs/PACKAGING.md). Data lives in AppData, not Program Files.
+
+## Phases
+
+MVP phases 1–10 are implemented. Optional polish: guided first-run Bible import UI.

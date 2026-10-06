@@ -6,6 +6,7 @@ import {
   buildYorubaNumberMap,
   verifiedYorubaBases,
 } from "../../shared/scripture/yorubaNumbers";
+import { getResourcesRoot } from "../paths";
 
 export type NumberLanguage = "en" | "yo" | "auto";
 
@@ -14,6 +15,7 @@ let yoMapCache: Record<string, number> | null = null;
 function loadYorubaNumberMap(): Record<string, number> {
   if (yoMapCache) return yoMapCache;
   const candidates = [
+    path.join(getResourcesRoot(), "numbers", "numbers.yo.json"),
     path.join(process.cwd(), "resources", "numbers", "numbers.yo.json"),
     path.join(__dirname, "../../../resources/numbers/numbers.yo.json"),
   ];

@@ -93,15 +93,18 @@ Phased delivery. Check items when implemented and verified.
 
 ## Phase 9 — Semantic detection
 
-- [ ] Optional embeddings — never block direct path
-- [ ] Only after Phases 1–8 are solid
+- [x] `EmbeddingProvider` + no-op stub (default)
+- [x] `SemanticMatcher` async/schedule path — never blocks direct
+- [x] `ReferenceInterpretationProvider` interface + DB validation helper
+- [x] Settings toggle `semanticEnabled` (default OFF)
+- [x] `docs/SEMANTIC_SEARCH.md`
 
 ## Phase 10 — Packaging
 
-- [ ] electron-builder Windows x64
-- [ ] AppData paths for DB / settings / logs
-- [ ] First-run wizard polish
-
+- [x] electron-builder Windows x64 (NSIS) via `npm run dist:win`
+- [x] AppData paths for DB / settings / logs (`ensureAppDataLayout`)
+- [x] First-launch marker + packaging docs (`docs/PACKAGING.md`)
+- [ ] Guided first-run Bible import wizard UI (follow-up polish)
 ## Docs checklist
 
 | Doc | Status |
@@ -114,5 +117,7 @@ Phased delivery. Check items when implemented and verified.
 | docs/YORUBA_SUPPORT.md | Done (Phase 7) |
 | docs/VMIX_INTEGRATION.md | Done (Phase 6) |
 | docs/TRANSCRIPTION.md | Done (Phase 4) |
+| docs/SEMANTIC_SEARCH.md | Done (Phase 9) |
+| docs/PACKAGING.md | Done (Phase 10) |
 | docs/SECURITY.md | Stub (Phase 1) |
 | THIRD_PARTY_LICENSES.md | Done (Phase 2) |

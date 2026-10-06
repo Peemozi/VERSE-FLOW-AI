@@ -3,32 +3,11 @@ import path from "node:path";
 import Database from "better-sqlite3";
 import { logger } from "../security/logger";
 import { MIGRATIONS } from "./migrations";
+import { getDbPath } from "../paths";
+
+export { getDbPath, getUserDataPath } from "../paths";
 
 let db: Database.Database | null = null;
-
-export function getUserDataPath(): string {
-  if (process.env.VERSEFLOW_DATA_DIR) {
-    return process.env.VERSEFLOW_DATA_DIR;
-  }
-  try {
-    // Lazy require so Vitest / Node scripts do not need Electron at import time.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const electron = require("electron") as { app?: { getPath: (name: string) => string } };
-    if (electron.app?.getPath) {
-      return electron.app.getPath("userData");
-    }
-  } catch {
-    // running outside Electron
-  }
-  return path.join(process.cwd(), "data");
-}
-
-export function getDbPath(): string {
-  if (process.env.VERSEFLOW_DB_PATH) return process.env.VERSEFLOW_DB_PATH;
-  const localDevDb = path.join(process.cwd(), "data", "verseflow.db");
-  if (fs.existsSync(localDevDb)) return localDevDb;
-  return path.join(getUserDataPath(), "verseflow.db");
-}
 
 export function openDatabase(dbPath = getDbPath()): Database.Database {
   if (db) return db;

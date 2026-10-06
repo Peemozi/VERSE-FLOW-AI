@@ -31,6 +31,8 @@ npm run build       # main + renderer production build
 - OverlayServer: serve `/overlay`, LIVE state API, bilingual theme payload
 - Yoruba hardening: OYCB aliases, numbers 1–176, ori/ese speech, diagnostics
 - Quotation FTS5 match + suggestion gate (low conf not auto-live)
+- Semantic stubs + async schedule (disabled by default)
+- AppData layout helpers (`ensureAppDataLayout`)
 
 ## Later
 

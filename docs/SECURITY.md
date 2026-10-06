@@ -17,5 +17,6 @@
 
 ## Data
 
-- Bible DB and settings live under Electron `userData` (or `VERSEFLOW_*` overrides)
+- Bible DB and settings live under Electron `userData` / AppData (never Program Files when packaged)
+- Layout ensured by `ensureAppDataLayout()` — see [PACKAGING.md](./PACKAGING.md)
 - No audio recording by default (Phase 4+)
