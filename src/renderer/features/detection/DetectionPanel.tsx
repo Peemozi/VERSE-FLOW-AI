@@ -1,18 +1,24 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAppStore } from "@/stores/app-store";
+import { cn } from "@/lib/utils";
 
 export function DetectionPanel() {
   const detections = useAppStore((s) => s.detections);
   const suppressedCount = useAppStore((s) => s.suppressedCount);
+  const selectedDetectionIndex = useAppStore((s) => s.selectedDetectionIndex);
+  const setSelectedDetectionIndex = useAppStore((s) => s.setSelectedDetectionIndex);
   const loadDetectionToPreview = useAppStore((s) => s.loadDetectionToPreview);
+  const mode = useAppStore((s) => s.settings.detection.mode);
+  const minConfidence = useAppStore((s) => s.settings.detection.minConfidence);
 
   return (
     <Card className="flex h-full flex-col overflow-hidden bg-slate-950/40">
       <CardHeader className="border-b border-border/40">
-        <CardTitle>Detections</CardTitle>
+        <CardTitle>Recent detections</CardTitle>
         <p className="text-xs text-muted-foreground">
-          Direct + contextual parser · {suppressedCount} duplicate{suppressedCount === 1 ? "" : "s"} suppressed
+          {mode} mode · auto-live ≥ {(minConfidence * 100).toFixed(0)}% · ↑↓ select · P preview ·{" "}
+          {suppressedCount} dup suppressed
         </p>
       </CardHeader>
       <CardContent className="flex-1 p-0">
@@ -20,15 +26,21 @@ export function DetectionPanel() {
           <ul className="divide-y divide-border/40">
             {detections.length === 0 ? (
               <li className="px-4 py-4 text-sm text-muted-foreground">
-                No detections yet. Simulate a transcript on the left.
+                No detections yet. Simulate a transcript or start Listen.
               </li>
             ) : (
-              detections.map((d) => (
+              detections.map((d, index) => (
                 <li key={d.id}>
                   <button
                     type="button"
-                    className="w-full px-4 py-3 text-left transition-colors hover:bg-accent/40"
-                    onClick={() => void loadDetectionToPreview(d)}
+                    className={cn(
+                      "w-full px-4 py-3 text-left transition-colors hover:bg-accent/40",
+                      index === selectedDetectionIndex && "bg-primary/15 ring-1 ring-inset ring-primary/40",
+                    )}
+                    onClick={() => {
+                      setSelectedDetectionIndex(index);
+                      void loadDetectionToPreview(d);
+                    }}
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-display font-semibold text-sky-200">{d.referenceLabel}</span>

@@ -2,7 +2,7 @@
 
 AI-powered church scripture presentation for Windows. Listens for spoken Bible references (English / Yoruba), resolves them against a local Bible database, and drives operator Preview/Live workflow toward vMix and a browser overlay.
 
-**Phase status:** Phases 1–4 implemented (foundation, Bible DB, reference parser + simulation, live speech). Operator workflow polish, vMix, and packaging come next.
+**Phase status:** Phases 1–5 implemented (foundation through operator workflow). vMix/overlay, Yoruba hardening, and packaging come next.
 
 ## Stack
 

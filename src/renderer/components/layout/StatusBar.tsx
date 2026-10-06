@@ -1,4 +1,5 @@
-import { Mic, Radio, Database, WifiOff } from "lucide-react";
+import { Mic, Radio, Database, WifiOff, History } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useAppStore } from "@/stores/app-store";
 import { APP_NAME } from "@shared/constants/app";
 
@@ -40,27 +41,42 @@ export function StatusBar() {
   const status = useAppStore((s) => s.status);
   const sttStatus = useAppStore((s) => s.sttStatus);
   const live = useAppStore((s) => s.live);
+  const view = useAppStore((s) => s.view);
+  const setView = useAppStore((s) => s.setView);
+  const mode = useAppStore((s) => s.settings.detection.mode);
+  const clearLive = useAppStore((s) => s.clearLive);
 
   return (
-    <header className="flex items-center justify-between border-b border-border/50 bg-black/20 px-4 py-3 backdrop-blur">
+    <header className="flex items-center justify-between gap-3 border-b border-border/50 bg-black/20 px-4 py-3 backdrop-blur">
       <div className="flex items-center gap-3">
         <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/20 text-primary">
           <Radio className="h-5 w-5" />
         </div>
         <div>
           <h1 className="font-display text-lg font-semibold tracking-tight text-foreground">{APP_NAME}</h1>
-          <p className="text-xs text-muted-foreground">Operator dashboard · Phase 1–4</p>
+          <p className="text-xs text-muted-foreground">Operator dashboard · Phase 1–5</p>
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
         <StatusPill
           label={status?.bibleReady ? "Bible ready" : "Bible not imported"}
           tone={status?.bibleReady ? "ok" : "warn"}
         />
         <StatusPill label={`STT ${sttStatus}`} tone={sttTone(sttStatus)} />
-        <StatusPill label="vMix disconnected" tone="off" />
+        <StatusPill label={mode} tone={mode === "automatic" ? "warn" : "ok"} />
         {live ? <StatusPill label="LIVE" tone="live" /> : null}
-        <span className="ml-2 hidden items-center gap-1 text-xs text-muted-foreground sm:inline-flex">
+        <Button size="sm" variant="destructive" onClick={() => void clearLive()}>
+          Clear Live
+        </Button>
+        <Button
+          size="sm"
+          variant={view === "history" ? "default" : "outline"}
+          onClick={() => setView(view === "history" ? "dashboard" : "history")}
+        >
+          <History className="h-4 w-4" />
+          History
+        </Button>
+        <span className="ml-1 hidden items-center gap-1 text-xs text-muted-foreground sm:inline-flex">
           <Database className="h-3.5 w-3.5" />
           {status?.dbReady ? "SQLite" : "DB…"}
         </span>

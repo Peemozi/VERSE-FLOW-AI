@@ -210,3 +210,50 @@ export const SttCapabilitiesSchema = z.object({
 });
 
 export type SttCapabilitiesDto = z.infer<typeof SttCapabilitiesSchema>;
+
+export const OperatorEventKindSchema = z.enum([
+  "detection",
+  "preview",
+  "queue_add",
+  "live",
+  "clear_live",
+  "manual_search",
+]);
+
+export const OperatorEventSchema = z.object({
+  id: z.number(),
+  sessionId: z.string(),
+  kind: OperatorEventKindSchema,
+  bookId: z.string().nullable(),
+  chapter: z.number().nullable(),
+  verse: z.number().nullable(),
+  endVerse: z.number().nullable(),
+  referenceLabel: z.string().nullable(),
+  translationId: z.string().nullable(),
+  verseText: z.string().nullable(),
+  confidence: z.number().nullable(),
+  method: z.string().nullable(),
+  notes: z.string().nullable(),
+  createdAt: z.string(),
+});
+
+export type OperatorEventDto = z.infer<typeof OperatorEventSchema>;
+
+export const RecordOperatorEventSchema = z.object({
+  kind: OperatorEventKindSchema,
+  bookId: z.string().nullable().optional(),
+  chapter: z.number().nullable().optional(),
+  verse: z.number().nullable().optional(),
+  endVerse: z.number().nullable().optional(),
+  referenceLabel: z.string().nullable().optional(),
+  translationId: z.string().nullable().optional(),
+  verseText: z.string().nullable().optional(),
+  confidence: z.number().nullable().optional(),
+  method: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+});
+
+export type RecordOperatorEventRequest = z.infer<typeof RecordOperatorEventSchema>;
+
+export const HistoryExportFormatSchema = z.enum(["csv", "json"]);
+export type HistoryExportFormat = z.infer<typeof HistoryExportFormatSchema>;

@@ -5,6 +5,7 @@ import type {
   BibleSearchResult,
   BibleVerseDto,
   DetectionEventDto,
+  OperatorEventDto,
   SttCapabilitiesDto,
   SttStatusDto,
   TranscriptEventDto,
@@ -12,7 +13,10 @@ import type {
 } from "@shared/schemas";
 import type { BibleBookInfo } from "@shared/types/ipc";
 import { APP_NAME, DEFAULT_SETTINGS } from "@shared/constants/app";
+import { shouldAutoLive } from "@shared/operator/workflow";
 import { listInputDevices, startAudioCapture, type AudioCaptureHandle, type CapturedDevice } from "@/lib/audio-capture";
+
+export type AppView = "dashboard" | "history";
 
 interface AppState {
   status: AppStatus | null;
@@ -21,11 +25,14 @@ interface AppState {
   books: BibleBookInfo[];
   preview: BibleVerseDto | null;
   live: BibleVerseDto | null;
+  queue: BibleVerseDto[];
   searchResults: BibleSearchResult[];
   searchQuery: string;
   selectedTranslationId: string;
+  selectedDetectionIndex: number;
   loading: boolean;
   error: string | null;
+  view: AppView;
   simulationText: string;
   simulationLog: string[];
   detections: DetectionEventDto[];
@@ -44,16 +51,27 @@ interface AppState {
   audioLevel: number;
   noInputWarning: boolean;
   isListening: boolean;
+  history: OperatorEventDto[];
   bootstrap: () => Promise<void>;
   refreshStatus: () => Promise<void>;
   updateSettings: (settings: AppSettings) => Promise<void>;
+  setView: (view: AppView) => void;
   setSearchQuery: (q: string) => void;
   setSelectedTranslation: (id: string) => void;
+  setSelectedDetectionIndex: (index: number) => void;
   runSearch: () => Promise<void>;
   loadVerseToPreview: (result: BibleSearchResult) => Promise<void>;
   loadDetectionToPreview: (detection: DetectionEventDto) => Promise<void>;
-  sendPreviewToLive: () => void;
-  clearLive: () => void;
+  ingestDetections: (detections: DetectionEventDto[], suppressedCount?: number) => Promise<void>;
+  sendPreviewToLive: () => Promise<void>;
+  clearLive: () => Promise<void>;
+  enqueuePreview: () => Promise<void>;
+  removeFromQueue: (index: number) => void;
+  liveFromQueueHead: () => Promise<void>;
+  liveFromQueueOrPreview: () => Promise<void>;
+  selectPrevDetection: () => void;
+  selectNextDetection: () => void;
+  detectionToPreview: () => Promise<void>;
   setSimulationText: (text: string) => void;
   runSimulation: (opts?: { resetContext?: boolean }) => Promise<void>;
   resetDetection: () => Promise<void>;
@@ -61,6 +79,10 @@ interface AppState {
   setInputDevice: (deviceId: string | null) => Promise<void>;
   startListening: () => Promise<void>;
   stopListening: () => Promise<void>;
+  refreshHistory: () => Promise<void>;
+  exportHistory: (format: "csv" | "json") => Promise<void>;
+  endHistorySession: () => Promise<void>;
+  focusBibleSearch: () => void;
 }
 
 function hasApi(): boolean {
@@ -78,6 +100,27 @@ function clearNoInputTimer(): void {
   }
 }
 
+async function recordHistorySafe(
+  event: Parameters<NonNullable<Window["verseflow"]>["recordHistory"]>[0],
+): Promise<void> {
+  if (!hasApi()) return;
+  try {
+    await window.verseflow.recordHistory(event);
+  } catch {
+    // history must never break operator flow
+  }
+}
+
+function downloadTextFile(filename: string, content: string, mime: string): void {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export const useAppStore = create<AppState>((set, get) => ({
   status: null,
   settings: structuredClone(DEFAULT_SETTINGS),
@@ -85,11 +128,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   books: [],
   preview: null,
   live: null,
+  queue: [],
   searchResults: [],
   searchQuery: "",
   selectedTranslationId: DEFAULT_SETTINGS.bible.defaultTranslationId,
+  selectedDetectionIndex: 0,
   loading: false,
   error: null,
+  view: "dashboard",
   simulationText: "",
   simulationLog: [],
   detections: [],
@@ -104,6 +150,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   audioLevel: 0,
   noInputWarning: false,
   isListening: false,
+  history: [],
 
   bootstrap: async () => {
     if (!hasApi()) {
@@ -157,18 +204,14 @@ export const useAppStore = create<AppState>((set, get) => ({
           }
         }),
         window.verseflow.onSttDetections((payload) => {
-          set((s) => ({
-            detections: [...payload.detections, ...s.detections].slice(0, 50),
-            suppressedCount: s.suppressedCount + payload.suppressed.length,
+          set({
             detectionContext: {
               bookId: payload.context.bookId,
               chapter: payload.context.chapter,
               verse: payload.context.verse,
             },
-          }));
-          if (payload.detections[0]) {
-            void get().loadDetectionToPreview(payload.detections[0]);
-          }
+          });
+          void get().ingestDetections(payload.detections, payload.suppressed.length);
         }),
         window.verseflow.onSttError(({ message }) => {
           set({ sttDetail: message });
@@ -186,6 +229,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         loading: false,
       });
       await get().refreshAudioDevices();
+      await get().refreshHistory();
     } catch (err) {
       set({
         loading: false,
@@ -209,9 +253,14 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ settings: saved });
   },
 
-  setSearchQuery: (q) => set({ searchQuery: q }),
+  setView: (view) => {
+    set({ view });
+    if (view === "history") void get().refreshHistory();
+  },
 
+  setSearchQuery: (q) => set({ searchQuery: q }),
   setSelectedTranslation: (id) => set({ selectedTranslationId: id }),
+  setSelectedDetectionIndex: (index) => set({ selectedDetectionIndex: Math.max(0, index) }),
 
   runSearch: async () => {
     const { searchQuery, selectedTranslationId } = get();
@@ -225,61 +274,214 @@ export const useAppStore = create<AppState>((set, get) => ({
       limit: 30,
     });
     set({ searchResults: results });
+    await recordHistorySafe({
+      kind: "manual_search",
+      notes: searchQuery.slice(0, 200),
+      translationId: selectedTranslationId,
+    });
   },
 
   loadVerseToPreview: async (result) => {
-    if (!hasApi()) {
-      set({
-        preview: {
-          translationId: result.translationId,
-          bookId: result.bookId,
-          chapter: result.chapter,
-          verse: result.verse,
-          originalText: result.originalText,
-          referenceLabel: result.referenceLabel,
-        },
-      });
-      return;
-    }
-    const verse = await window.verseflow.getVerse({
+    let verse: BibleVerseDto | null = {
       translationId: result.translationId,
-      ref: { bookId: result.bookId, chapter: result.chapter, verse: result.verse },
-    });
+      bookId: result.bookId,
+      chapter: result.chapter,
+      verse: result.verse,
+      originalText: result.originalText,
+      referenceLabel: result.referenceLabel,
+    };
+    if (hasApi()) {
+      verse = await window.verseflow.getVerse({
+        translationId: result.translationId,
+        ref: { bookId: result.bookId, chapter: result.chapter, verse: result.verse },
+      });
+    }
     set({ preview: verse });
+    if (verse) {
+      await recordHistorySafe({
+        kind: "preview",
+        bookId: verse.bookId,
+        chapter: verse.chapter,
+        verse: verse.verse,
+        referenceLabel: verse.referenceLabel,
+        translationId: verse.translationId,
+        verseText: verse.originalText,
+        method: "manual",
+      });
+    }
   },
 
   loadDetectionToPreview: async (detection) => {
-    if (detection.verseText) {
-      set({
-        preview: {
+    const verse: BibleVerseDto = detection.verseText
+      ? {
           translationId: detection.translationId,
           bookId: detection.bookId,
           chapter: detection.chapter,
           verse: detection.verse,
           originalText: detection.verseText,
           referenceLabel: detection.referenceLabel,
-        },
-      });
-      return;
-    }
-    if (!hasApi()) return;
-    const verse = await window.verseflow.getVerse({
-      translationId: detection.translationId,
-      ref: {
-        bookId: detection.bookId,
-        chapter: detection.chapter,
-        verse: detection.verse,
-      },
-    });
+        }
+      : ((hasApi()
+          ? await window.verseflow.getVerse({
+              translationId: detection.translationId,
+              ref: {
+                bookId: detection.bookId,
+                chapter: detection.chapter,
+                verse: detection.verse,
+              },
+            })
+          : null) ?? {
+          translationId: detection.translationId,
+          bookId: detection.bookId,
+          chapter: detection.chapter,
+          verse: detection.verse,
+          originalText: "",
+          referenceLabel: detection.referenceLabel,
+        });
+
     set({ preview: verse });
+    await recordHistorySafe({
+      kind: "preview",
+      bookId: verse.bookId,
+      chapter: verse.chapter,
+      verse: verse.verse,
+      endVerse: detection.endVerse ?? null,
+      referenceLabel: verse.referenceLabel,
+      translationId: verse.translationId,
+      verseText: verse.originalText,
+      confidence: detection.confidence,
+      method: detection.method,
+    });
   },
 
-  sendPreviewToLive: () => {
+  ingestDetections: async (incoming, suppressedAdd = 0) => {
+    if (incoming.length === 0 && suppressedAdd === 0) return;
+    const { settings } = get();
+    set((s) => ({
+      detections: [...incoming, ...s.detections].slice(0, 50),
+      suppressedCount: s.suppressedCount + suppressedAdd,
+      selectedDetectionIndex: 0,
+    }));
+
+    for (const d of incoming) {
+      await recordHistorySafe({
+        kind: "detection",
+        bookId: d.bookId,
+        chapter: d.chapter,
+        verse: d.verse,
+        endVerse: d.endVerse ?? null,
+        referenceLabel: d.referenceLabel,
+        translationId: d.translationId,
+        verseText: d.verseText,
+        confidence: d.confidence,
+        method: d.method,
+      });
+    }
+
+    const top = incoming[0];
+    if (!top) return;
+
+    if (shouldAutoLive(settings.detection.mode, top.confidence, settings.detection.minConfidence)) {
+      await get().loadDetectionToPreview(top);
+      await get().sendPreviewToLive();
+    } else {
+      await get().loadDetectionToPreview(top);
+    }
+  },
+
+  sendPreviewToLive: async () => {
     const { preview } = get();
-    if (preview) set({ live: preview });
+    if (!preview) return;
+    set({ live: preview });
+    await recordHistorySafe({
+      kind: "live",
+      bookId: preview.bookId,
+      chapter: preview.chapter,
+      verse: preview.verse,
+      referenceLabel: preview.referenceLabel,
+      translationId: preview.translationId,
+      verseText: preview.originalText,
+    });
   },
 
-  clearLive: () => set({ live: null }),
+  clearLive: async () => {
+    const { live } = get();
+    set({ live: null });
+    await recordHistorySafe({
+      kind: "clear_live",
+      bookId: live?.bookId ?? null,
+      chapter: live?.chapter ?? null,
+      verse: live?.verse ?? null,
+      referenceLabel: live?.referenceLabel ?? null,
+      translationId: live?.translationId ?? null,
+      notes: live ? "cleared" : "clear with empty live",
+    });
+  },
+
+  enqueuePreview: async () => {
+    const { preview, queue } = get();
+    if (!preview) return;
+    set({ queue: [...queue, preview] });
+    await recordHistorySafe({
+      kind: "queue_add",
+      bookId: preview.bookId,
+      chapter: preview.chapter,
+      verse: preview.verse,
+      referenceLabel: preview.referenceLabel,
+      translationId: preview.translationId,
+      verseText: preview.originalText,
+    });
+  },
+
+  removeFromQueue: (index) => {
+    set((s) => ({ queue: s.queue.filter((_, i) => i !== index) }));
+  },
+
+  liveFromQueueHead: async () => {
+    const { queue } = get();
+    if (queue.length === 0) return;
+    const [head, ...rest] = queue;
+    set({ queue: rest, live: head, preview: head });
+    await recordHistorySafe({
+      kind: "live",
+      bookId: head.bookId,
+      chapter: head.chapter,
+      verse: head.verse,
+      referenceLabel: head.referenceLabel,
+      translationId: head.translationId,
+      verseText: head.originalText,
+      notes: "from_queue",
+    });
+  },
+
+  liveFromQueueOrPreview: async () => {
+    if (get().queue.length > 0) {
+      await get().liveFromQueueHead();
+    } else {
+      await get().sendPreviewToLive();
+    }
+  },
+
+  selectPrevDetection: () => {
+    set((s) => ({
+      selectedDetectionIndex: Math.max(0, s.selectedDetectionIndex - 1),
+    }));
+  },
+
+  selectNextDetection: () => {
+    set((s) => ({
+      selectedDetectionIndex: Math.min(
+        Math.max(0, s.detections.length - 1),
+        s.selectedDetectionIndex + 1,
+      ),
+    }));
+  },
+
+  detectionToPreview: async () => {
+    const { detections, selectedDetectionIndex } = get();
+    const d = detections[selectedDetectionIndex];
+    if (d) await get().loadDetectionToPreview(d);
+  },
 
   setSimulationText: (text) => set({ simulationText: text }),
 
@@ -297,8 +499,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       resetContext: opts?.resetContext,
     });
     set({
-      detections: [...result.detections, ...get().detections].slice(0, 50),
-      suppressedCount: get().suppressedCount + result.suppressed.length,
       detectionContext: {
         bookId: result.context.bookId,
         chapter: result.context.chapter,
@@ -307,9 +507,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       simulationLog: [`→ ${text}`, ...simulationLog].slice(0, 40),
       simulationText: "",
     });
-    if (result.detections[0]) {
-      await get().loadDetectionToPreview(result.detections[0]);
-    }
+    await get().ingestDetections(result.detections, result.suppressed.length);
   },
 
   resetDetection: async () => {
@@ -321,6 +519,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       simulationLog: [],
       finalTranscripts: [],
       interimTranscript: "",
+      selectedDetectionIndex: 0,
     });
   },
 
@@ -405,6 +604,35 @@ export const useAppStore = create<AppState>((set, get) => ({
       noInputWarning: false,
       interimTranscript: "",
       sttStatus: get().sttCapabilities?.credentialsConfigured ? "idle" : "unavailable",
+    });
+  },
+
+  refreshHistory: async () => {
+    if (!hasApi()) return;
+    const history = await window.verseflow.listHistory(200);
+    set({ history });
+  },
+
+  exportHistory: async (format) => {
+    if (!hasApi()) return;
+    const { filename, content } = await window.verseflow.exportHistory(format);
+    downloadTextFile(
+      filename,
+      content,
+      format === "csv" ? "text/csv;charset=utf-8" : "application/json;charset=utf-8",
+    );
+  },
+
+  endHistorySession: async () => {
+    if (!hasApi()) return;
+    await window.verseflow.endHistorySession();
+    await get().refreshHistory();
+  },
+
+  focusBibleSearch: () => {
+    set({ view: "dashboard" });
+    queueMicrotask(() => {
+      document.getElementById("bible-search-input")?.focus();
     });
   },
 }));

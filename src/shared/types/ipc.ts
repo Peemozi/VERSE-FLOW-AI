@@ -3,6 +3,11 @@ import type {
   AppStatus,
   BibleSearchResult,
   BibleVerseDto,
+  DetectionEventDto,
+  HistoryExportFormatSchema,
+  LanguageMode,
+  OperatorEventDto,
+  RecordOperatorEventRequest,
   SimulateTranscriptRequest,
   SimulateTranscriptResponse,
   SttCapabilitiesDto,
@@ -10,9 +15,8 @@ import type {
   TranscriptEventDto,
   TranslationInfo,
   VerseRef,
-  DetectionEventDto,
-  LanguageMode,
 } from "../schemas";
+import type { z } from "zod";
 
 /** Typed IPC channel names — keep in sync with preload + main handlers. */
 export const IpcChannels = {
@@ -29,6 +33,10 @@ export const IpcChannels = {
   STT_START: "stt:start",
   STT_STOP: "stt:stop",
   STT_PUSH_AUDIO: "stt:pushAudio",
+  HISTORY_LIST: "history:list",
+  HISTORY_RECORD: "history:record",
+  HISTORY_EXPORT: "history:export",
+  HISTORY_END_SESSION: "history:endSession",
   LOG_WRITE: "log:write",
 } as const;
 
@@ -75,6 +83,8 @@ export interface SttDetectionsEvent {
   };
 }
 
+export type HistoryExportFormat = z.infer<typeof HistoryExportFormatSchema>;
+
 export interface VerseFlowApi {
   getStatus: () => Promise<AppStatus>;
   getSettings: () => Promise<AppSettings>;
@@ -96,6 +106,10 @@ export interface VerseFlowApi {
   startListening: (args: SttStartRequest) => Promise<SttStartResponse>;
   stopListening: () => Promise<void>;
   pushAudio: (pcm: ArrayBuffer) => Promise<void>;
+  listHistory: (limit?: number) => Promise<OperatorEventDto[]>;
+  recordHistory: (event: RecordOperatorEventRequest) => Promise<OperatorEventDto>;
+  exportHistory: (format: HistoryExportFormat) => Promise<{ filename: string; content: string }>;
+  endHistorySession: () => Promise<void>;
   onSttStatus: (cb: (payload: { status: SttStatusDto; detail?: string }) => void) => () => void;
   onSttTranscript: (cb: (payload: TranscriptEventDto) => void) => () => void;
   onSttDetections: (cb: (payload: SttDetectionsEvent) => void) => () => void;

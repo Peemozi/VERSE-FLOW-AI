@@ -54,18 +54,20 @@ Phased delivery. Check items when implemented and verified.
 
 ## Phase 5 — Operator workflow
 
-- [ ] Preview / Queue / Live / History
-- [ ] Assisted vs Automatic mode
-- [ ] Shortcuts (Space/Enter/Esc/Ctrl+K/…)
-- [ ] CLEAR LIVE always available
-- [ ] Duplicate suppression
+- [x] Recent Detections / Preview / Queue / Live / Clear Live
+- [x] Assisted (default) vs Automatic mode (min auto-live confidence)
+- [x] Manual Bible search Ctrl/Cmd+K fully wired
+- [x] Shortcuts: Space, Enter, Esc, Ctrl/Cmd+K, arrows, P, Q, L (ignored in inputs)
+- [x] Session history page + CSV/JSON export (no audio)
+- [x] LIVE unmistakable; CLEAR LIVE always available
+- [x] Duplicate suppression (from Phase 3, still active)
 
 ## Phase 6 — vMix + browser overlay
 
 - [ ] `VmixOutputAdapter` (HTTP 8088 / TCP 8099)
 - [ ] Test Connection + title field mapping
 - [ ] Local overlay + WebSocket themes
-- [ ] Session export CSV/JSON (no audio)
+- [ ] Session export CSV/JSON via vMix workflow (operator history export shipped in Phase 5)
 
 ## Phase 7 — Yoruba hardening
 

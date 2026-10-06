@@ -77,9 +77,32 @@ export function SettingsPanel() {
               })
             }
           >
-            <option value="assisted">Assisted</option>
-            <option value="automatic">Automatic</option>
+            <option value="assisted">Assisted (preview only)</option>
+            <option value="automatic">Automatic (high-conf → LIVE)</option>
           </select>
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="min-conf">Min auto-live confidence</Label>
+          <input
+            id="min-conf"
+            type="number"
+            min={0}
+            max={1}
+            step={0.05}
+            className="flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+            value={settings.detection.minConfidence}
+            onChange={(e) =>
+              patch({
+                detection: {
+                  ...settings.detection,
+                  minConfidence: Number(e.target.value),
+                },
+              })
+            }
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Automatic mode takes detections ≥ this threshold straight to LIVE.
+          </p>
         </div>
         <div className="md:col-span-3">
           <Button
@@ -96,6 +119,10 @@ export function SettingsPanel() {
           >
             Log level: {settings.advanced.logLevel}
           </Button>
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            Shortcuts: Space/Enter live · Esc clear · Ctrl/Cmd+K search · ↑↓ detections · P preview · Q
+            queue · L live next
+          </p>
         </div>
       </CardContent>
     </Card>

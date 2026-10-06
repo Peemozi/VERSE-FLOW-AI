@@ -3,7 +3,9 @@ import { z } from "zod";
 import { APP_NAME, APP_VERSION } from "../../shared/constants/app";
 import {
   AppSettingsSchema,
+  HistoryExportFormatSchema,
   LanguageModeSchema,
+  RecordOperatorEventSchema,
   SimulateTranscriptRequestSchema,
 } from "../../shared/schemas";
 import { IpcChannels } from "../../shared/types/ipc";
@@ -14,6 +16,8 @@ import { logger } from "../security/logger";
 import { getScriptureDetector, resetScriptureDetector } from "../scripture/detectorService";
 import { getLiveSession } from "../transcription/LiveSessionController";
 import { GoogleCloudSpeechProvider } from "../transcription/GoogleCloudSpeechProvider";
+import { getSessionHistory } from "../sessions";
+import { exportHistoryCsv, exportHistoryJson } from "../../shared/operator/workflow";
 
 function bibleRepo(): BibleRepository {
   const db = getDatabase();
@@ -125,6 +129,36 @@ export function registerIpcHandlers(): void {
         error: err instanceof Error ? err.message : String(err),
       });
     }
+  });
+
+  ipcMain.handle(IpcChannels.HISTORY_LIST, (_event, limit?: number) => {
+    return getSessionHistory().list(typeof limit === "number" ? limit : 200);
+  });
+
+  ipcMain.handle(IpcChannels.HISTORY_RECORD, (_event, payload: unknown) => {
+    const event = RecordOperatorEventSchema.parse(payload);
+    const settings = loadSettings();
+    return getSessionHistory().record(event, settings.general.languageMode);
+  });
+
+  ipcMain.handle(IpcChannels.HISTORY_EXPORT, (_event, format: unknown) => {
+    const fmt = HistoryExportFormatSchema.parse(format);
+    const rows = getSessionHistory().list(1000);
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    if (fmt === "csv") {
+      return {
+        filename: `verseflow-history-${stamp}.csv`,
+        content: exportHistoryCsv(rows),
+      };
+    }
+    return {
+      filename: `verseflow-history-${stamp}.json`,
+      content: exportHistoryJson(rows),
+    };
+  });
+
+  ipcMain.handle(IpcChannels.HISTORY_END_SESSION, () => {
+    getSessionHistory().endSession();
   });
 
   ipcMain.handle(

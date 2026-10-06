@@ -5,11 +5,15 @@ import { PreviewLivePanel } from "@/features/live/PreviewLivePanel";
 import { AudioPanel } from "@/features/live/AudioPanel";
 import { BibleSearchPanel } from "@/features/bible/BibleSearchPanel";
 import { SettingsPanel } from "@/features/settings/SettingsPanel";
+import { HistoryPanel } from "@/features/history/HistoryPanel";
 import { useAppStore } from "@/stores/app-store";
+import { useOperatorShortcuts } from "@/hooks/useOperatorShortcuts";
 
 export function DashboardPage() {
   const error = useAppStore((s) => s.error);
   const loading = useAppStore((s) => s.loading);
+  const view = useAppStore((s) => s.view);
+  useOperatorShortcuts();
 
   return (
     <div className="flex min-h-screen flex-col bg-app">
@@ -22,23 +26,29 @@ export function DashboardPage() {
         ) : null}
         {loading ? <div className="text-sm text-muted-foreground">Loading…</div> : null}
 
-        <div className="grid flex-1 gap-3 lg:grid-cols-[1.1fr_1.1fr_0.9fr]">
-          <div className="flex min-h-[280px] flex-col gap-3">
-            <TranscriptPanel />
-            <BibleSearchPanel />
-          </div>
-          <div className="min-h-[280px]">
-            <DetectionPanel />
-          </div>
-          <div className="min-h-[280px]">
-            <PreviewLivePanel />
-          </div>
-        </div>
+        {view === "history" ? (
+          <HistoryPanel />
+        ) : (
+          <>
+            <div className="grid flex-1 gap-3 lg:grid-cols-[1.1fr_1.1fr_0.9fr]">
+              <div className="flex min-h-[280px] flex-col gap-3">
+                <TranscriptPanel />
+                <BibleSearchPanel />
+              </div>
+              <div className="min-h-[280px]">
+                <DetectionPanel />
+              </div>
+              <div className="min-h-[280px]">
+                <PreviewLivePanel />
+              </div>
+            </div>
 
-        <footer className="grid gap-3 border-t border-border/40 pt-3 lg:grid-cols-2">
-          <SettingsPanel />
-          <AudioPanel />
-        </footer>
+            <footer className="grid gap-3 border-t border-border/40 pt-3 lg:grid-cols-2">
+              <SettingsPanel />
+              <AudioPanel />
+            </footer>
+          </>
+        )}
       </main>
     </div>
   );

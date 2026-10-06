@@ -1,6 +1,8 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type {
   AppSettings,
+  HistoryExportFormat,
+  RecordOperatorEventRequest,
   SimulateTranscriptRequest,
   SttStatusDto,
   TranscriptEventDto,
@@ -39,6 +41,12 @@ const api: VerseFlowApi = {
   pushAudio: async (pcm: ArrayBuffer) => {
     await ipcRenderer.invoke(IpcChannels.STT_PUSH_AUDIO, Buffer.from(pcm));
   },
+  listHistory: (limit) => ipcRenderer.invoke(IpcChannels.HISTORY_LIST, limit),
+  recordHistory: (event: RecordOperatorEventRequest) =>
+    ipcRenderer.invoke(IpcChannels.HISTORY_RECORD, event),
+  exportHistory: (format: HistoryExportFormat) =>
+    ipcRenderer.invoke(IpcChannels.HISTORY_EXPORT, format),
+  endHistorySession: () => ipcRenderer.invoke(IpcChannels.HISTORY_END_SESSION),
   onSttStatus: (cb) =>
     subscribe<{ status: SttStatusDto; detail?: string }>(IpcEvents.STT_STATUS, cb),
   onSttTranscript: (cb) => subscribe<TranscriptEventDto>(IpcEvents.STT_TRANSCRIPT, cb),

@@ -94,4 +94,4 @@ Canonical book IDs are language-neutral (`GEN`, `JHN`, `1CO`, …). Verses store
 
 ## Phase boundary
 
-Phases 1–4 ship foundation, Bible DB, deterministic reference parser + Simulation Mode, and live speech (Google STT). Operator workflow polish, vMix, and packaging are later — see [ROADMAP.md](./ROADMAP.md).
+Phases 1–5 ship foundation through operator workflow (Preview/Queue/Live/History, assisted vs automatic, shortcuts, history export). vMix and packaging are later — see [ROADMAP.md](./ROADMAP.md).

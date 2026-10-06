@@ -81,4 +81,30 @@ export const MIGRATIONS: Migration[] = [
       CREATE INDEX IF NOT EXISTS idx_detections_session ON detections (session_id, created_at);
     `,
   },
+  {
+    id: "002_operator_events",
+    sql: `
+      CREATE TABLE IF NOT EXISTS operator_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id TEXT NOT NULL,
+        kind TEXT NOT NULL CHECK (kind IN (
+          'detection', 'preview', 'queue_add', 'live', 'clear_live', 'manual_search'
+        )),
+        book_id TEXT,
+        chapter INTEGER,
+        verse INTEGER,
+        end_verse INTEGER,
+        reference_label TEXT,
+        translation_id TEXT,
+        verse_text TEXT,
+        confidence REAL,
+        method TEXT,
+        notes TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_operator_events_session
+        ON operator_events (session_id, created_at);
+    `,
+  },
 ];

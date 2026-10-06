@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,17 +16,6 @@ export function BibleSearchPanel() {
   const runSearch = useAppStore((s) => s.runSearch);
   const loadVerseToPreview = useAppStore((s) => s.loadVerseToPreview);
   const status = useAppStore((s) => s.status);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        document.getElementById("bible-search-input")?.focus();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
 
   return (
     <Card className="flex h-full flex-col overflow-hidden bg-slate-950/40">

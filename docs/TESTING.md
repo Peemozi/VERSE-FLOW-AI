@@ -9,7 +9,7 @@ npm run lint        # ESLint
 npm run build       # main + renderer production build
 ```
 
-## Current coverage (Phase 1–4)
+## Current coverage (Phase 1–5)
 
 - Settings Zod schema + defaults
 - App name constant
@@ -25,6 +25,8 @@ npm run build       # main + renderer production build
 - STT capabilities / bilingual honesty / reconnect backoff
 - LiveSessionController finals → detector (fake provider)
 - Unavailable provider without credentials
+- Auto-live decision, operator shortcuts, history CSV/JSON export
+- SessionHistoryRepository operator events
 
 ## Later
 
