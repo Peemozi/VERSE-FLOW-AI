@@ -2,7 +2,7 @@
 
 AI-powered church scripture presentation for Windows. Listens for spoken Bible references (English / Yoruba), resolves them against a local Bible database, and drives operator Preview/Live workflow toward vMix and a browser overlay.
 
-**Phase status:** Phases 1–3 implemented (foundation, Bible DB, reference parser + simulation). Speech recognition is intentionally not enabled yet.
+**Phase status:** Phases 1–4 implemented (foundation, Bible DB, reference parser + simulation, live speech). Operator workflow polish, vMix, and packaging come next.
 
 ## Stack
 
@@ -35,7 +35,14 @@ npm run dev              # Vite :5179 + Electron
 
 See [docs/BIBLE_DATA.md](docs/BIBLE_DATA.md). Raw downloads are gitignored.
 
-Point the app at the imported DB:
+## Speech
+
+```bash
+export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
+npm run dev
+```
+
+See [docs/TRANSCRIPTION.md](docs/TRANSCRIPTION.md). Without credentials, Listen stays unavailable; Simulation Mode and Bible lookup still work.
 
 ```bash
 VERSEFLOW_DB_PATH=./data/verseflow.db npm run dev

@@ -22,8 +22,23 @@ function StatusPill({
   );
 }
 
+function sttTone(status: string | undefined): "ok" | "warn" | "off" | "live" {
+  switch (status) {
+    case "listening":
+      return "live";
+    case "reconnecting":
+    case "error":
+      return "warn";
+    case "idle":
+      return "ok";
+    default:
+      return "off";
+  }
+}
+
 export function StatusBar() {
   const status = useAppStore((s) => s.status);
+  const sttStatus = useAppStore((s) => s.sttStatus);
   const live = useAppStore((s) => s.live);
 
   return (
@@ -34,7 +49,7 @@ export function StatusBar() {
         </div>
         <div>
           <h1 className="font-display text-lg font-semibold tracking-tight text-foreground">{APP_NAME}</h1>
-          <p className="text-xs text-muted-foreground">Operator dashboard · Phase 1–3</p>
+          <p className="text-xs text-muted-foreground">Operator dashboard · Phase 1–4</p>
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-2">
@@ -42,7 +57,7 @@ export function StatusBar() {
           label={status?.bibleReady ? "Bible ready" : "Bible not imported"}
           tone={status?.bibleReady ? "ok" : "warn"}
         />
-        <StatusPill label="STT unavailable" tone="off" />
+        <StatusPill label={`STT ${sttStatus}`} tone={sttTone(sttStatus)} />
         <StatusPill label="vMix disconnected" tone="off" />
         {live ? <StatusPill label="LIVE" tone="live" /> : null}
         <span className="ml-2 hidden items-center gap-1 text-xs text-muted-foreground sm:inline-flex">
@@ -51,7 +66,7 @@ export function StatusBar() {
         </span>
         <span className="hidden items-center gap-1 text-xs text-muted-foreground md:inline-flex">
           <Mic className="h-3.5 w-3.5" />
-          Listen later
+          {status?.sttCredentialsConfigured ? "Creds set" : "No STT creds"}
         </span>
         <span className="hidden items-center gap-1 text-xs text-muted-foreground lg:inline-flex">
           <WifiOff className="h-3.5 w-3.5" />

@@ -2,6 +2,7 @@ import { StatusBar } from "@/components/layout/StatusBar";
 import { TranscriptPanel } from "@/features/transcript/TranscriptPanel";
 import { DetectionPanel } from "@/features/detection/DetectionPanel";
 import { PreviewLivePanel } from "@/features/live/PreviewLivePanel";
+import { AudioPanel } from "@/features/live/AudioPanel";
 import { BibleSearchPanel } from "@/features/bible/BibleSearchPanel";
 import { SettingsPanel } from "@/features/settings/SettingsPanel";
 import { useAppStore } from "@/stores/app-store";
@@ -34,15 +35,9 @@ export function DashboardPage() {
           </div>
         </div>
 
-        <footer className="grid gap-3 border-t border-border/40 pt-3 md:grid-cols-[1.4fr_1fr]">
+        <footer className="grid gap-3 border-t border-border/40 pt-3 lg:grid-cols-2">
           <SettingsPanel />
-          <div className="rounded-lg border border-border/60 bg-card/40 p-4 text-sm text-muted-foreground">
-            <p className="font-display text-sm font-semibold text-foreground">Session / Audio / vMix</p>
-            <p className="mt-1">
-              Bottom status strip placeholders for audio levels, vMix latency, and session controls — wired in Phases
-              4–6.
-            </p>
-          </div>
+          <AudioPanel />
         </footer>
       </main>
     </div>

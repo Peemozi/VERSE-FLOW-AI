@@ -1,12 +1,19 @@
 import { ipcMain } from "electron";
+import { z } from "zod";
 import { APP_NAME, APP_VERSION } from "../../shared/constants/app";
-import { AppSettingsSchema, SimulateTranscriptRequestSchema } from "../../shared/schemas";
+import {
+  AppSettingsSchema,
+  LanguageModeSchema,
+  SimulateTranscriptRequestSchema,
+} from "../../shared/schemas";
 import { IpcChannels } from "../../shared/types/ipc";
 import { getDatabase } from "../database/connection";
 import { BibleRepository } from "../database/BibleRepository";
 import { loadSettings, saveSettings } from "../settings/store";
 import { logger } from "../security/logger";
 import { getScriptureDetector, resetScriptureDetector } from "../scripture/detectorService";
+import { getLiveSession } from "../transcription/LiveSessionController";
+import { GoogleCloudSpeechProvider } from "../transcription/GoogleCloudSpeechProvider";
 
 function bibleRepo(): BibleRepository {
   const db = getDatabase();
@@ -15,18 +22,25 @@ function bibleRepo(): BibleRepository {
   return repo;
 }
 
+const SttStartSchema = z.object({
+  languageMode: LanguageModeSchema,
+  sampleRateHertz: z.number().int().positive().optional(),
+});
+
 export function registerIpcHandlers(): void {
   ipcMain.handle(IpcChannels.APP_GET_STATUS, () => {
     const repo = bibleRepo();
     const translations = repo.listTranslations();
     const bibleReady = translations.some((t) => t.verseCount > 0);
+    const session = getLiveSession();
     return {
       appName: APP_NAME,
       version: APP_VERSION,
       dbReady: true,
       bibleReady,
-      sttStatus: "unavailable" as const,
+      sttStatus: session.getStatus(),
       vmixStatus: "disconnected" as const,
+      sttCredentialsConfigured: GoogleCloudSpeechProvider.credentialsConfigured(),
     };
   });
 
@@ -35,7 +49,6 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(IpcChannels.SETTINGS_SET, (_event, payload: unknown) => {
     const parsed = AppSettingsSchema.parse(payload);
     const saved = saveSettings(parsed);
-    // Recreate detector so language / translation preferences apply
     resetScriptureDetector();
     return saved;
   });
@@ -77,6 +90,41 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(IpcChannels.DETECTION_RESET, () => {
     resetScriptureDetector();
+  });
+
+  ipcMain.handle(IpcChannels.STT_GET_CAPABILITIES, () => getLiveSession().getCapabilities());
+
+  ipcMain.handle(IpcChannels.STT_START, async (_event, payload: unknown) => {
+    const req = SttStartSchema.parse(payload);
+    const settings = loadSettings();
+    return getLiveSession().start({
+      languageMode: req.languageMode ?? settings.general.languageMode,
+      sampleRateHertz: req.sampleRateHertz ?? settings.transcription.sampleRateHertz,
+    });
+  });
+
+  ipcMain.handle(IpcChannels.STT_STOP, async () => {
+    await getLiveSession().stop();
+  });
+
+  ipcMain.handle(IpcChannels.STT_PUSH_AUDIO, (_event, payload: unknown) => {
+    try {
+      let buffer: Buffer;
+      if (Buffer.isBuffer(payload)) {
+        buffer = payload;
+      } else if (payload instanceof Uint8Array) {
+        buffer = Buffer.from(payload);
+      } else if (payload && typeof payload === "object" && "data" in (payload as object)) {
+        buffer = Buffer.from((payload as { data: number[] }).data);
+      } else {
+        return;
+      }
+      getLiveSession().pushAudio(buffer);
+    } catch (err) {
+      logger.warn("STT_PUSH_AUDIO failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
   });
 
   ipcMain.handle(

@@ -19,6 +19,14 @@ export const AppSettingsSchema = z.object({
     languageMode: LanguageModeSchema,
     startMinimized: z.boolean(),
   }),
+  audio: z.object({
+    inputDeviceId: z.string().nullable(),
+    noInputWarningMs: z.number().int().positive(),
+  }),
+  transcription: z.object({
+    provider: z.enum(["google", "unavailable"]),
+    sampleRateHertz: z.number().int().positive(),
+  }),
   bible: z.object({
     defaultTranslationId: z.string().min(1),
     secondaryTranslationId: z.string().nullable(),
@@ -43,9 +51,28 @@ export const AppSettingsSchema = z.object({
 
 export type AppSettings = z.infer<typeof AppSettingsSchema>;
 
+function deepMergeSettings(partial: Record<string, unknown>): AppSettings {
+  const base = structuredClone(DEFAULT_SETTINGS) as AppSettings & Record<string, unknown>;
+  for (const key of Object.keys(base)) {
+    const incoming = partial[key];
+    if (incoming && typeof incoming === "object" && !Array.isArray(incoming)) {
+      base[key as keyof AppSettings] = {
+        ...(base[key as keyof AppSettings] as object),
+        ...(incoming as object),
+      } as never;
+    }
+  }
+  return base as AppSettings;
+}
+
 export function parseSettings(input: unknown): AppSettings {
   const parsed = AppSettingsSchema.safeParse(input);
   if (parsed.success) return parsed.data;
+  if (input && typeof input === "object") {
+    const merged = deepMergeSettings(input as Record<string, unknown>);
+    const again = AppSettingsSchema.safeParse(merged);
+    if (again.success) return again.data;
+  }
   return structuredClone(DEFAULT_SETTINGS);
 }
 
@@ -92,13 +119,23 @@ export const TranslationInfoSchema = z.object({
 
 export type TranslationInfo = z.infer<typeof TranslationInfoSchema>;
 
+export const SttStatusSchema = z.enum([
+  "unavailable",
+  "idle",
+  "listening",
+  "error",
+  "reconnecting",
+]);
+export type SttStatusDto = z.infer<typeof SttStatusSchema>;
+
 export const AppStatusSchema = z.object({
   appName: z.string(),
   version: z.string(),
   dbReady: z.boolean(),
   bibleReady: z.boolean(),
-  sttStatus: z.enum(["unavailable", "idle", "listening", "error"]),
+  sttStatus: SttStatusSchema,
   vmixStatus: z.enum(["disconnected", "connected", "error"]),
+  sttCredentialsConfigured: z.boolean(),
 });
 
 export type AppStatus = z.infer<typeof AppStatusSchema>;
@@ -144,3 +181,32 @@ export const SimulateTranscriptResponseSchema = z.object({
 });
 
 export type SimulateTranscriptResponse = z.infer<typeof SimulateTranscriptResponseSchema>;
+
+export const TranscriptEventSchema = z.object({
+  text: z.string(),
+  isFinal: z.boolean(),
+  stability: z.number().optional(),
+  languageCode: z.string().optional(),
+  receivedAt: z.string(),
+});
+
+export type TranscriptEventDto = z.infer<typeof TranscriptEventSchema>;
+
+export const SttCapabilitiesSchema = z.object({
+  providerId: z.string(),
+  displayName: z.string(),
+  streaming: z.boolean(),
+  interimResults: z.boolean(),
+  credentialsConfigured: z.boolean(),
+  languageModes: z.record(
+    z.object({
+      supported: z.boolean(),
+      languageCodes: z.array(z.string()),
+      bilingualStrategy: z.enum(["unsupported", "alternative-language-codes"]).optional(),
+      notes: z.string().optional(),
+    }),
+  ),
+  futureProviders: z.array(z.string()),
+});
+
+export type SttCapabilitiesDto = z.infer<typeof SttCapabilitiesSchema>;

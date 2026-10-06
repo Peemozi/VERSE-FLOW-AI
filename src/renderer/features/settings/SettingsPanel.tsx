@@ -37,8 +37,11 @@ export function SettingsPanel() {
           >
             <option value="english">English</option>
             <option value="yoruba">Yoruba</option>
-            <option value="bilingual">Bilingual / Mixed</option>
+            <option value="bilingual">Bilingual / Mixed (alt. language codes)</option>
           </select>
+          <p className="text-[11px] text-muted-foreground">
+            Bilingual uses Google alternativeLanguageCodes — not dual independent ASR.
+          </p>
         </div>
         <div className="space-y-1">
           <Label htmlFor="default-tr">Default translation</Label>

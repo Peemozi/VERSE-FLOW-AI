@@ -41,11 +41,16 @@ Phased delivery. Check items when implemented and verified.
 
 ## Phase 4 — Live speech
 
-- [ ] Audio device list + level meter
-- [ ] `SpeechToTextProvider` + Google Cloud STT (en-NG / yo-NG)
-- [ ] Credentials via env / secure storage only
-- [ ] Language modes: English / Yoruba / Bilingual
-- [ ] Status + reconnect backoff (no crash on mic/STT loss)
+- [x] Audio device list + selection + real-time level meter
+- [x] No-input / mute warning
+- [x] `SpeechToTextProvider` interface + Google Cloud streaming STT (main only)
+- [x] Language modes EN / YO / Bilingual with honest capability reporting
+- [x] Interim + final transcripts; finals → Phase 3 `ScriptureDetector`
+- [x] Provider status + reconnect/backoff (no crash on STT/mic loss)
+- [x] `.env.example` for `GOOGLE_APPLICATION_CREDENTIALS`
+- [x] `docs/TRANSCRIPTION.md`
+- [x] Unit tests (capabilities, backoff, finals→detector, unavailable provider)
+- [ ] Whisper provider — architect stub only (not implemented)
 
 ## Phase 5 — Operator workflow
 
@@ -96,6 +101,6 @@ Phased delivery. Check items when implemented and verified.
 | docs/TESTING.md | Done (Phase 1–2) |
 | docs/YORUBA_SUPPORT.md | Deferred (Phase 7) |
 | docs/VMIX_INTEGRATION.md | Deferred (Phase 6) |
-| docs/TRANSCRIPTION.md | Deferred (Phase 4) |
+| docs/TRANSCRIPTION.md | Done (Phase 4) |
 | docs/SECURITY.md | Stub (Phase 1) |
 | THIRD_PARTY_LICENSES.md | Done (Phase 2) |

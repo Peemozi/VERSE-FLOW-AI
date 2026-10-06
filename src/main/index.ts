@@ -6,6 +6,7 @@ import { BibleRepository } from "./database/BibleRepository";
 import { registerIpcHandlers } from "./ipc/handlers";
 import { loadSettings } from "./settings/store";
 import { logger } from "./security/logger";
+import { getLiveSession } from "./transcription/LiveSessionController";
 
 const isDev = !app.isPackaged && process.env.NODE_ENV !== "production";
 
@@ -46,7 +47,10 @@ function createWindow(): void {
     void mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
   }
 
+  getLiveSession().setWindow(mainWindow);
+
   mainWindow.on("closed", () => {
+    getLiveSession().setWindow(null);
     mainWindow = null;
   });
 }
@@ -70,11 +74,13 @@ app.whenReady().then(() => {
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
+    void getLiveSession().stop();
     closeDatabase();
     app.quit();
   }
 });
 
 app.on("before-quit", () => {
+  void getLiveSession().stop();
   closeDatabase();
 });

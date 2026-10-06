@@ -1,6 +1,24 @@
 import { contextBridge, ipcRenderer } from "electron";
-import type { AppSettings, SimulateTranscriptRequest, VerseRef } from "../shared/schemas";
-import { IpcChannels, type VerseFlowApi } from "../shared/types/ipc";
+import type {
+  AppSettings,
+  SimulateTranscriptRequest,
+  SttStatusDto,
+  TranscriptEventDto,
+  VerseRef,
+} from "../shared/schemas";
+import {
+  IpcChannels,
+  IpcEvents,
+  type SttDetectionsEvent,
+  type SttStartRequest,
+  type VerseFlowApi,
+} from "../shared/types/ipc";
+
+function subscribe<T>(channel: string, cb: (payload: T) => void): () => void {
+  const listener = (_event: Electron.IpcRendererEvent, payload: T) => cb(payload);
+  ipcRenderer.on(channel, listener);
+  return () => ipcRenderer.removeListener(channel, listener);
+}
 
 const api: VerseFlowApi = {
   getStatus: () => ipcRenderer.invoke(IpcChannels.APP_GET_STATUS),
@@ -15,6 +33,18 @@ const api: VerseFlowApi = {
   simulateTranscript: (args: SimulateTranscriptRequest) =>
     ipcRenderer.invoke(IpcChannels.DETECTION_SIMULATE, args),
   resetDetection: () => ipcRenderer.invoke(IpcChannels.DETECTION_RESET),
+  getSttCapabilities: () => ipcRenderer.invoke(IpcChannels.STT_GET_CAPABILITIES),
+  startListening: (args: SttStartRequest) => ipcRenderer.invoke(IpcChannels.STT_START, args),
+  stopListening: () => ipcRenderer.invoke(IpcChannels.STT_STOP),
+  pushAudio: async (pcm: ArrayBuffer) => {
+    await ipcRenderer.invoke(IpcChannels.STT_PUSH_AUDIO, Buffer.from(pcm));
+  },
+  onSttStatus: (cb) =>
+    subscribe<{ status: SttStatusDto; detail?: string }>(IpcEvents.STT_STATUS, cb),
+  onSttTranscript: (cb) => subscribe<TranscriptEventDto>(IpcEvents.STT_TRANSCRIPT, cb),
+  onSttDetections: (cb) => subscribe<SttDetectionsEvent>(IpcEvents.STT_DETECTIONS, cb),
+  onSttError: (cb) =>
+    subscribe<{ message: string; retryable: boolean }>(IpcEvents.STT_ERROR, cb),
   log: (level, message) => ipcRenderer.invoke(IpcChannels.LOG_WRITE, level, message),
 };
 

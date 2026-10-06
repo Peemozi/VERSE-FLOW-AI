@@ -9,7 +9,7 @@ npm run lint        # ESLint
 npm run build       # main + renderer production build
 ```
 
-## Current coverage (Phase 1–3)
+## Current coverage (Phase 1–4)
 
 - Settings Zod schema + defaults
 - App name constant
@@ -22,6 +22,9 @@ npm run build       # main + renderer production build
 - Invalid ref rejection + duplicate suppression
 - Yoruba verified aliases (Johanu, Saamu, …)
 - `ScriptureDetector` simulation pipeline with DB validation
+- STT capabilities / bilingual honesty / reconnect backoff
+- LiveSessionController finals → detector (fake provider)
+- Unavailable provider without credentials
 
 ## Later
 

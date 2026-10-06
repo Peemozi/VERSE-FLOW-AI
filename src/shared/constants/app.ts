@@ -10,6 +10,14 @@ export const DEFAULT_SETTINGS: AppSettings = {
     languageMode: "english",
     startMinimized: false,
   },
+  audio: {
+    inputDeviceId: null,
+    noInputWarningMs: 4000,
+  },
+  transcription: {
+    provider: "google",
+    sampleRateHertz: 16000,
+  },
   bible: {
     defaultTranslationId: "WEB",
     secondaryTranslationId: "OYCB",
