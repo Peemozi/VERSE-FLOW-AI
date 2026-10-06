@@ -45,7 +45,7 @@ Original Windows desktop app for church scripture presentation. Inspired by Logh
 src/main/
   audio/          device list, capture (Phase 4+)
   database/       migrations, connection, repositories
-  scripture/      detectors, normalizers (Phase 3+)
+  scripture/      normalizers, aliases, parser, ScriptureDetector (Phase 3)
   transcription/  SpeechToTextProvider (Phase 4+)
   vmix/           VmixOutputAdapter (Phase 6+)
   overlay/        local browser overlay server (Phase 6+)
@@ -94,4 +94,4 @@ Canonical book IDs are language-neutral (`GEN`, `JHN`, `1CO`, …). Verses store
 
 ## Phase boundary
 
-Phases 1–2 ship foundation + Bible DB/import/manual lookup. Speech recognition, detection pipeline, vMix, and packaging are later phases — see [ROADMAP.md](./ROADMAP.md).
+Phases 1–3 ship foundation, Bible DB/import/manual lookup, and the deterministic reference parser with Simulation Mode. Live speech, vMix, and packaging are later phases — see [ROADMAP.md](./ROADMAP.md).

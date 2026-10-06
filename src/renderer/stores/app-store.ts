@@ -1,5 +1,12 @@
 import { create } from "zustand";
-import type { AppSettings, AppStatus, BibleSearchResult, BibleVerseDto, TranslationInfo } from "@shared/schemas";
+import type {
+  AppSettings,
+  AppStatus,
+  BibleSearchResult,
+  BibleVerseDto,
+  DetectionEventDto,
+  TranslationInfo,
+} from "@shared/schemas";
 import type { BibleBookInfo } from "@shared/types/ipc";
 import { APP_NAME, DEFAULT_SETTINGS } from "@shared/constants/app";
 
@@ -15,6 +22,15 @@ interface AppState {
   selectedTranslationId: string;
   loading: boolean;
   error: string | null;
+  simulationText: string;
+  simulationLog: string[];
+  detections: DetectionEventDto[];
+  suppressedCount: number;
+  detectionContext: {
+    bookId: string | null;
+    chapter: number | null;
+    verse: number | null;
+  } | null;
   bootstrap: () => Promise<void>;
   refreshStatus: () => Promise<void>;
   updateSettings: (settings: AppSettings) => Promise<void>;
@@ -22,8 +38,12 @@ interface AppState {
   setSelectedTranslation: (id: string) => void;
   runSearch: () => Promise<void>;
   loadVerseToPreview: (result: BibleSearchResult) => Promise<void>;
+  loadDetectionToPreview: (detection: DetectionEventDto) => Promise<void>;
   sendPreviewToLive: () => void;
   clearLive: () => void;
+  setSimulationText: (text: string) => void;
+  runSimulation: (opts?: { resetContext?: boolean }) => Promise<void>;
+  resetDetection: () => Promise<void>;
 }
 
 function hasApi(): boolean {
@@ -42,6 +62,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   selectedTranslationId: DEFAULT_SETTINGS.bible.defaultTranslationId,
   loading: false,
   error: null,
+  simulationText: "",
+  simulationLog: [],
+  detections: [],
+  suppressedCount: 0,
+  detectionContext: null,
 
   bootstrap: async () => {
     if (!hasApi()) {
@@ -140,10 +165,77 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ preview: verse });
   },
 
+  loadDetectionToPreview: async (detection) => {
+    if (detection.verseText) {
+      set({
+        preview: {
+          translationId: detection.translationId,
+          bookId: detection.bookId,
+          chapter: detection.chapter,
+          verse: detection.verse,
+          originalText: detection.verseText,
+          referenceLabel: detection.referenceLabel,
+        },
+      });
+      return;
+    }
+    if (!hasApi()) return;
+    const verse = await window.verseflow.getVerse({
+      translationId: detection.translationId,
+      ref: {
+        bookId: detection.bookId,
+        chapter: detection.chapter,
+        verse: detection.verse,
+      },
+    });
+    set({ preview: verse });
+  },
+
   sendPreviewToLive: () => {
     const { preview } = get();
     if (preview) set({ live: preview });
   },
 
   clearLive: () => set({ live: null }),
+
+  setSimulationText: (text) => set({ simulationText: text }),
+
+  runSimulation: async (opts) => {
+    const { simulationText, selectedTranslationId, simulationLog } = get();
+    const text = simulationText.trim();
+    if (!text) return;
+    if (!hasApi()) {
+      set({ error: "Simulation requires the Electron bridge." });
+      return;
+    }
+    const result = await window.verseflow.simulateTranscript({
+      text,
+      translationId: selectedTranslationId,
+      resetContext: opts?.resetContext,
+    });
+    set({
+      detections: [...result.detections, ...get().detections].slice(0, 50),
+      suppressedCount: get().suppressedCount + result.suppressed.length,
+      detectionContext: {
+        bookId: result.context.bookId,
+        chapter: result.context.chapter,
+        verse: result.context.verse,
+      },
+      simulationLog: [`→ ${text}`, ...simulationLog].slice(0, 40),
+      simulationText: "",
+    });
+    if (result.detections[0]) {
+      await get().loadDetectionToPreview(result.detections[0]);
+    }
+  },
+
+  resetDetection: async () => {
+    if (hasApi()) await window.verseflow.resetDetection();
+    set({
+      detections: [],
+      suppressedCount: 0,
+      detectionContext: null,
+      simulationLog: [],
+    });
+  },
 }));

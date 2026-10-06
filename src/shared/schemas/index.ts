@@ -2,7 +2,9 @@ import { z } from "zod";
 import { DEFAULT_SETTINGS } from "../constants/app";
 
 export const LanguageModeSchema = z.enum(["english", "yoruba", "bilingual"]);
+export type LanguageMode = z.infer<typeof LanguageModeSchema>;
 export const DetectionModeSchema = z.enum(["assisted", "automatic"]);
+export type DetectionMode = z.infer<typeof DetectionModeSchema>;
 export const DetectionMethodSchema = z.enum([
   "direct",
   "contextual",
@@ -10,6 +12,7 @@ export const DetectionMethodSchema = z.enum([
   "semantic",
   "manual",
 ]);
+export type DetectionMethod = z.infer<typeof DetectionMethodSchema>;
 
 export const AppSettingsSchema = z.object({
   general: z.object({
@@ -99,3 +102,45 @@ export const AppStatusSchema = z.object({
 });
 
 export type AppStatus = z.infer<typeof AppStatusSchema>;
+
+export const DetectionEventSchema = z.object({
+  id: z.string(),
+  method: DetectionMethodSchema,
+  bookId: z.string(),
+  chapter: z.number(),
+  verse: z.number(),
+  endVerse: z.number().optional(),
+  confidence: z.number(),
+  transcriptSnippet: z.string(),
+  rawMatch: z.string(),
+  referenceLabel: z.string(),
+  translationId: z.string(),
+  verseText: z.string().nullable(),
+  suppressed: z.boolean(),
+  createdAt: z.string(),
+});
+
+export type DetectionEventDto = z.infer<typeof DetectionEventSchema>;
+
+export const SimulateTranscriptRequestSchema = z.object({
+  text: z.string().min(1),
+  translationId: z.string().optional(),
+  resetContext: z.boolean().optional(),
+});
+
+export type SimulateTranscriptRequest = z.infer<typeof SimulateTranscriptRequestSchema>;
+
+export const SimulateTranscriptResponseSchema = z.object({
+  detections: z.array(DetectionEventSchema),
+  suppressed: z.array(DetectionEventSchema),
+  normalizedTranscript: z.string(),
+  context: z.object({
+    bookId: z.string().nullable(),
+    chapter: z.number().nullable(),
+    verse: z.number().nullable(),
+    updatedAt: z.number(),
+    expiresAt: z.number(),
+  }),
+});
+
+export type SimulateTranscriptResponse = z.infer<typeof SimulateTranscriptResponseSchema>;

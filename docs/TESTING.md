@@ -9,7 +9,7 @@ npm run lint        # ESLint
 npm run build       # main + renderer production build
 ```
 
-## Current coverage (Phase 1–2)
+## Current coverage (Phase 1–3)
 
 - Settings Zod schema + defaults
 - App name constant
@@ -17,6 +17,11 @@ npm run build       # main + renderer production build
 - `BibleRepository` get/search/seed
 - USFM parser + marker stripping
 - Yoruba diacritic normalization helper
+- Reference parser: English direct, spoken numbers, ranges
+- Contextual verse resolution + context TTL
+- Invalid ref rejection + duplicate suppression
+- Yoruba verified aliases (Johanu, Saamu, …)
+- `ScriptureDetector` simulation pipeline with DB validation
 
 ## Later
 

@@ -1,4 +1,13 @@
-import type { AppSettings, AppStatus, BibleSearchResult, BibleVerseDto, TranslationInfo, VerseRef } from "../schemas";
+import type {
+  AppSettings,
+  AppStatus,
+  BibleSearchResult,
+  BibleVerseDto,
+  SimulateTranscriptRequest,
+  SimulateTranscriptResponse,
+  TranslationInfo,
+  VerseRef,
+} from "../schemas";
 
 /** Typed IPC channel names — keep in sync with preload + main handlers. */
 export const IpcChannels = {
@@ -9,6 +18,8 @@ export const IpcChannels = {
   BIBLE_LIST_BOOKS: "bible:listBooks",
   BIBLE_GET_VERSE: "bible:getVerse",
   BIBLE_SEARCH: "bible:search",
+  DETECTION_SIMULATE: "detection:simulate",
+  DETECTION_RESET: "detection:reset",
   LOG_WRITE: "log:write",
 } as const;
 
@@ -37,6 +48,8 @@ export interface VerseFlowApi {
     query: string;
     limit?: number;
   }) => Promise<BibleSearchResult[]>;
+  simulateTranscript: (args: SimulateTranscriptRequest) => Promise<SimulateTranscriptResponse>;
+  resetDetection: () => Promise<void>;
   log: (level: "debug" | "info" | "warn" | "error", message: string) => Promise<void>;
 }
 

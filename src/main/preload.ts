@@ -1,7 +1,6 @@
 import { contextBridge, ipcRenderer } from "electron";
-import type { AppSettings } from "../shared/schemas";
+import type { AppSettings, SimulateTranscriptRequest, VerseRef } from "../shared/schemas";
 import { IpcChannels, type VerseFlowApi } from "../shared/types/ipc";
-import type { VerseRef } from "../shared/schemas";
 
 const api: VerseFlowApi = {
   getStatus: () => ipcRenderer.invoke(IpcChannels.APP_GET_STATUS),
@@ -13,6 +12,9 @@ const api: VerseFlowApi = {
     ipcRenderer.invoke(IpcChannels.BIBLE_GET_VERSE, args),
   searchBible: (args: { translationId: string; query: string; limit?: number }) =>
     ipcRenderer.invoke(IpcChannels.BIBLE_SEARCH, args),
+  simulateTranscript: (args: SimulateTranscriptRequest) =>
+    ipcRenderer.invoke(IpcChannels.DETECTION_SIMULATE, args),
+  resetDetection: () => ipcRenderer.invoke(IpcChannels.DETECTION_RESET),
   log: (level, message) => ipcRenderer.invoke(IpcChannels.LOG_WRITE, level, message),
 };
 

@@ -1,11 +1,12 @@
 import { ipcMain } from "electron";
 import { APP_NAME, APP_VERSION } from "../../shared/constants/app";
-import { AppSettingsSchema } from "../../shared/schemas";
+import { AppSettingsSchema, SimulateTranscriptRequestSchema } from "../../shared/schemas";
 import { IpcChannels } from "../../shared/types/ipc";
 import { getDatabase } from "../database/connection";
 import { BibleRepository } from "../database/BibleRepository";
 import { loadSettings, saveSettings } from "../settings/store";
 import { logger } from "../security/logger";
+import { getScriptureDetector, resetScriptureDetector } from "../scripture/detectorService";
 
 function bibleRepo(): BibleRepository {
   const db = getDatabase();
@@ -33,7 +34,10 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(IpcChannels.SETTINGS_SET, (_event, payload: unknown) => {
     const parsed = AppSettingsSchema.parse(payload);
-    return saveSettings(parsed);
+    const saved = saveSettings(parsed);
+    // Recreate detector so language / translation preferences apply
+    resetScriptureDetector();
+    return saved;
   });
 
   ipcMain.handle(IpcChannels.BIBLE_LIST_TRANSLATIONS, () => bibleRepo().listTranslations());
@@ -57,6 +61,23 @@ export function registerIpcHandlers(): void {
       return bibleRepo().search(args.translationId, args.query, args.limit ?? 25);
     },
   );
+
+  ipcMain.handle(IpcChannels.DETECTION_SIMULATE, (_event, payload: unknown) => {
+    const req = SimulateTranscriptRequestSchema.parse(payload);
+    const detector = getScriptureDetector();
+    if (req.resetContext) detector.reset();
+    if (req.translationId) detector.setTranslationId(req.translationId);
+    const result = detector.processTranscript(req.text);
+    logger.info("Simulation transcript processed", {
+      detections: result.detections.length,
+      suppressed: result.suppressed.length,
+    });
+    return result;
+  });
+
+  ipcMain.handle(IpcChannels.DETECTION_RESET, () => {
+    resetScriptureDetector();
+  });
 
   ipcMain.handle(
     IpcChannels.LOG_WRITE,

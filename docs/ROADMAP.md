@@ -29,11 +29,15 @@ Phased delivery. Check items when implemented and verified.
 
 ## Phase 3 — Reference parser + simulation
 
-- [ ] Direct reference parser (EN)
-- [ ] Simulation mode (type transcript → same pipeline)
-- [ ] Confidence + DB validation
-- [ ] Unit tests for parser edge cases
-- [ ] No live speech yet
+- [x] Direct reference parser (EN)
+- [x] Transcript / Yoruba / number normalizers
+- [x] Book alias engine (EN full + careful YO verified set)
+- [x] Context tracking + contextual verse/chapter parsing
+- [x] Verse ranges + validation (structure + optional DB)
+- [x] Confidence scoring + duplicate suppression
+- [x] Simulation mode (type transcript → same pipeline)
+- [x] Unit tests: English direct, context, invalid, duplicate; Yoruba verified aliases
+- [x] No live speech yet
 
 ## Phase 4 — Live speech
 
