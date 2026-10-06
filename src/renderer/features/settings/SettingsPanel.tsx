@@ -11,8 +11,12 @@ export function SettingsPanel() {
   const status = useAppStore((s) => s.status);
   const vmixDetail = useAppStore((s) => s.vmixDetail);
   const overlayUrl = useAppStore((s) => s.overlayUrl);
+  const overlayStatus = useAppStore((s) => s.overlayStatus);
   const testVmixConnection = useAppStore((s) => s.testVmixConnection);
   const connectVmix = useAppStore((s) => s.connectVmix);
+  const restartOverlay = useAppStore((s) => s.restartOverlay);
+  const openOverlay = useAppStore((s) => s.openOverlay);
+  const copyOverlayUrl = useAppStore((s) => s.copyOverlayUrl);
 
   const patch = (partial: Partial<AppSettings>) => {
     void updateSettings({ ...settings, ...partial });
@@ -403,12 +407,52 @@ export function SettingsPanel() {
                 <option value="bilingual">Bilingual</option>
               </select>
             </div>
-            <div className="md:col-span-3 text-xs text-muted-foreground">
-              Point a vMix Browser input at{" "}
-              <code className="rounded bg-black/40 px-1 py-0.5 text-[11px] text-sky-200">
-                {overlayUrl ?? `http://127.0.0.1:${settings.output.overlayPort}/overlay`}
-              </code>{" "}
-              (transparent background). See docs/VMIX_INTEGRATION.md.
+            <div className="md:col-span-3 space-y-2">
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="text-muted-foreground">Status:</span>
+                <span
+                  className={
+                    overlayStatus?.status === "listening"
+                      ? "text-emerald-300"
+                      : overlayStatus?.status === "error"
+                        ? "text-amber-300"
+                        : "text-muted-foreground"
+                  }
+                >
+                  {overlayStatus?.status ?? (settings.output.overlayEnabled ? "unknown" : "disabled")}
+                  {overlayStatus?.remapped ? ` (remapped from ${overlayStatus.preferredPort})` : ""}
+                </span>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Local URL (same PC as vMix — not a cloud/Docker host):{" "}
+                <code className="rounded bg-black/40 px-1 py-0.5 text-[11px] text-sky-200">
+                  {overlayStatus?.url ??
+                    overlayUrl ??
+                    `http://127.0.0.1:${settings.output.overlayPort}/overlay`}
+                </code>
+              </div>
+              {overlayStatus?.error ? (
+                <p className="text-xs text-amber-200/90">{overlayStatus.error}</p>
+              ) : null}
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => void copyOverlayUrl()}
+                >
+                  Copy URL
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => void openOverlay()}>
+                  Open Overlay
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => void restartOverlay()}>
+                  Restart Overlay Server
+                </Button>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Point a vMix Browser input at the URL above (transparent background). Send Live
+                pushes updates over WebSocket — no page refresh. See docs/VMIX_INTEGRATION.md.
+              </p>
             </div>
           </div>
         </div>

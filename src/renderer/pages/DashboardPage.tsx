@@ -5,6 +5,7 @@ import { PreviewLivePanel } from "@/features/live/PreviewLivePanel";
 import { AudioPanel } from "@/features/live/AudioPanel";
 import { BibleSearchPanel } from "@/features/bible/BibleSearchPanel";
 import { SettingsPanel } from "@/features/settings/SettingsPanel";
+import { OverlayTestPanel } from "@/features/overlay/OverlayTestPanel";
 import { HistoryPanel } from "@/features/history/HistoryPanel";
 import { DiagnosticsPanel } from "@/features/diagnostics/DiagnosticsPanel";
 import { useAppStore } from "@/stores/app-store";
@@ -47,7 +48,10 @@ export function DashboardPage() {
             </div>
 
             <footer className="grid gap-3 border-t border-border/40 pt-3 lg:grid-cols-2">
-              <SettingsPanel />
+              <div className="flex flex-col gap-3">
+                <SettingsPanel />
+                <OverlayTestPanel />
+              </div>
               <AudioPanel />
             </footer>
           </>

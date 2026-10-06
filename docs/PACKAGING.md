@@ -2,6 +2,22 @@
 
 Windows 10/11 x64 installer via **electron-builder** (NSIS). Mutable data never lives under Program Files.
 
+## Dev on a Windows church PC (before packaging)
+
+Same machine as vMix — local Electron only (no cloud overlay host):
+
+```bat
+git clone <YOUR_REPO_URL>
+cd <repo-folder>
+git checkout cursor/verseflow-phase1-2-8ac8
+npm install
+npm run rebuild:native
+npm run bible:import
+npm run dev
+```
+
+If the Cursor remote is still **`agent_temp`**, create a real repo first (Create repo in Cursor), push branch `cursor/verseflow-phase1-2-8ac8`, then clone that URL on the church PC. Overlay binds `127.0.0.1:8791` inside the Electron process — see [VMIX_INTEGRATION.md](./VMIX_INTEGRATION.md).
+
 ## Build installer
 
 ```bash
@@ -44,6 +60,7 @@ On `app.whenReady`:
 2. Open DB under AppData (or override) and run migrations
 3. Seed canonical books; verses appear after `bible:import` into that DB (or a future first-run import UI)
 4. Load `settings.json` (defaults written on first settings access)
+5. `OutputController.startFromSettings()` starts the local overlay on `127.0.0.1:8791` when enabled
 
 No audio or cloud credentials are required to open the operator UI. STT stays unavailable until `GOOGLE_APPLICATION_CREDENTIALS` is set in the environment (never baked into the installer).
 

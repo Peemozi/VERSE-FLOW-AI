@@ -48,6 +48,8 @@ export const IpcChannels = {
   OUTPUT_SEND_LIVE: "output:sendLive",
   OUTPUT_CLEAR_LIVE: "output:clearLive",
   OUTPUT_GET_OVERLAY_INFO: "output:getOverlayInfo",
+  OUTPUT_RESTART_OVERLAY: "output:restartOverlay",
+  OUTPUT_OPEN_OVERLAY: "output:openOverlay",
   LOG_WRITE: "log:write",
 } as const;
 
@@ -60,7 +62,22 @@ export const IpcEvents = {
   STT_DETECTIONS: "stt:event:detections",
   STT_ERROR: "stt:event:error",
   VMIX_STATUS: "vmix:event:status",
+  OVERLAY_STATUS: "overlay:event:status",
 } as const;
+
+/** Mirrors OverlayServer.getStatusSnapshot — kept serializable for IPC. */
+export interface OverlayStatusDto {
+  status: "stopped" | "listening" | "error" | "disabled";
+  url: string;
+  host: string;
+  port: number;
+  preferredPort: number;
+  remapped: boolean;
+  listening: boolean;
+  enabled: boolean;
+  theme: string;
+  error: string | null;
+}
 
 export interface BibleBookInfo {
   id: string;
@@ -127,7 +144,9 @@ export interface VerseFlowApi {
   connectVmix: () => Promise<{ status: string; detail?: string }>;
   sendLiveOutput: (payload: LiveScripturePayloadDto) => Promise<OutputSendResult>;
   clearLiveOutput: () => Promise<OutputSendResult>;
-  getOverlayInfo: () => Promise<{ url: string; listening: boolean; theme: string }>;
+  getOverlayInfo: () => Promise<OverlayStatusDto>;
+  restartOverlay: () => Promise<OverlayStatusDto>;
+  openOverlay: () => Promise<{ ok: boolean; url: string; error?: string }>;
   onSttStatus: (cb: (payload: { status: SttStatusDto; detail?: string }) => void) => () => void;
   onSttTranscript: (cb: (payload: TranscriptEventDto) => void) => () => void;
   onSttDetections: (cb: (payload: SttDetectionsEvent) => void) => () => void;
@@ -135,6 +154,7 @@ export interface VerseFlowApi {
   onVmixStatus: (
     cb: (payload: { status: "disconnected" | "connected" | "error"; detail?: string }) => void,
   ) => () => void;
+  onOverlayStatus: (cb: (payload: OverlayStatusDto) => void) => () => void;
   log: (level: "debug" | "info" | "warn" | "error", message: string) => Promise<void>;
 }
 

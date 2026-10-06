@@ -1,4 +1,4 @@
-import { ipcMain } from "electron";
+import { ipcMain, shell } from "electron";
 import { z } from "zod";
 import { APP_NAME, APP_VERSION } from "../../shared/constants/app";
 import {
@@ -211,13 +211,33 @@ export function registerIpcHandlers(): void {
   });
 
   ipcMain.handle(IpcChannels.OUTPUT_GET_OVERLAY_INFO, () => {
+    return getOutputController().getOverlayStatus();
+  });
+
+  ipcMain.handle(IpcChannels.OUTPUT_RESTART_OVERLAY, async () => {
+    return getOutputController().restartOverlay();
+  });
+
+  ipcMain.handle(IpcChannels.OUTPUT_OPEN_OVERLAY, async () => {
     const output = getOutputController();
-    const settings = loadSettings();
-    return {
-      url: output.getOverlayUrl(),
-      listening: output.isOverlayListening(),
-      theme: settings.output.overlayTheme,
-    };
+    const snap = output.getOverlayStatus();
+    if (!snap.listening) {
+      return {
+        ok: false,
+        url: snap.url,
+        error: snap.error ?? "Overlay server is not listening. Enable it and Restart Overlay Server.",
+      };
+    }
+    try {
+      await shell.openExternal(snap.url);
+      return { ok: true, url: snap.url };
+    } catch (err) {
+      return {
+        ok: false,
+        url: snap.url,
+        error: err instanceof Error ? err.message : String(err),
+      };
+    }
   });
 
   ipcMain.handle(

@@ -5,8 +5,12 @@ import type {
   OutputConnectionStatus,
 } from "./BroadcastOutput";
 import { VmixOutputAdapter } from "./VmixOutputAdapter";
-import { OverlayServer, type OverlayThemeId } from "../overlay/OverlayServer";
-import { loadSettings } from "../settings/store";
+import {
+  OverlayServer,
+  type OverlayStatusSnapshot,
+  type OverlayThemeId,
+} from "../overlay/OverlayServer";
+import { loadSettings, saveSettings } from "../settings/store";
 import { logger } from "../security/logger";
 import type { BrowserWindow } from "electron";
 import { IpcEvents } from "../../shared/types/ipc";
@@ -40,6 +44,7 @@ function settingsToOverlay(s: AppSettings) {
 /**
  * Orchestrates vMix adapter + local overlay server.
  * Send Live / Clear Live fan out to both outputs.
+ * Overlay binds on the church PC only (127.0.0.1) — same machine as vMix.
  */
 export class OutputController {
   private vmix: VmixOutputAdapter;
@@ -74,6 +79,10 @@ export class OutputController {
     return this.overlay.isListening();
   }
 
+  getOverlayStatus(): OverlayStatusSnapshot {
+    return this.overlay.getStatusSnapshot();
+  }
+
   onStatus(cb: StatusCb): () => void {
     this.statusListeners.add(cb);
     return () => this.statusListeners.delete(cb);
@@ -82,27 +91,25 @@ export class OutputController {
   async applySettings(settings: AppSettings): Promise<void> {
     const wasOverlay = this.overlay.isListening();
     const nextOverlay = settingsToOverlay(settings);
-    const prevOverlay = this.overlay.getConfig();
+    const prevPreferred = this.overlay.getStatusSnapshot().preferredPort;
+    const prevEnabled = this.overlay.getConfig().enabled;
 
     this.vmix.updateConfig(settingsToVmix(settings));
 
-    const portChanged = prevOverlay.port !== nextOverlay.port;
-    const enabledChanged = prevOverlay.enabled !== nextOverlay.enabled;
+    const preferredChanged = nextOverlay.port !== prevPreferred;
+    const enabledChanged = prevEnabled !== nextOverlay.enabled;
 
     this.overlay.updateConfig(nextOverlay);
 
-    if (wasOverlay && (portChanged || (enabledChanged && !nextOverlay.enabled))) {
+    if (wasOverlay && (preferredChanged || (enabledChanged && !nextOverlay.enabled))) {
       await this.overlay.stop();
     }
-    if (nextOverlay.enabled && (!this.overlay.isListening() || portChanged)) {
-      try {
-        await this.overlay.start();
-      } catch (err) {
-        logger.warn("Overlay restart failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-      }
+    if (nextOverlay.enabled && (!this.overlay.isListening() || preferredChanged)) {
+      await this.overlay.start();
+      this.persistRemappedPortIfNeeded(settings);
     }
+
+    this.pushOverlayStatus();
 
     if (settings.vmix.enabled) {
       await this.vmix.connect();
@@ -114,6 +121,20 @@ export class OutputController {
   async startFromSettings(): Promise<void> {
     const settings = loadSettings();
     await this.applySettings(settings);
+  }
+
+  /** Stop + start overlay using current settings (UI Restart button). */
+  async restartOverlay(): Promise<OverlayStatusSnapshot> {
+    const settings = loadSettings();
+    const next = settingsToOverlay(settings);
+    await this.overlay.stop();
+    this.overlay.updateConfig(next);
+    if (next.enabled) {
+      await this.overlay.start();
+      this.persistRemappedPortIfNeeded(settings);
+    }
+    const snap = this.pushOverlayStatus();
+    return snap;
   }
 
   async testConnection(): Promise<ConnectionTestResult> {
@@ -140,8 +161,18 @@ export class OutputController {
       if (this.overlay.getConfig().enabled) {
         if (!this.overlay.isListening()) {
           await this.overlay.start();
+          this.persistRemappedPortIfNeeded(loadSettings());
+          this.pushOverlayStatus();
         }
-        await this.overlay.sendLive(payload);
+        if (!this.overlay.isListening()) {
+          overlayOk = false;
+          errors.push(
+            this.overlay.getLastError() ??
+              "Overlay server is not listening. Check Settings → OUTPUT and Restart Overlay Server.",
+          );
+        } else {
+          await this.overlay.sendLive(payload);
+        }
       }
     } catch (err) {
       overlayOk = false;
@@ -180,6 +211,23 @@ export class OutputController {
     await this.overlay.stop();
   }
 
+  private persistRemappedPortIfNeeded(settings: AppSettings): void {
+    const snap = this.overlay.getStatusSnapshot();
+    if (!snap.listening || !snap.remapped) return;
+    if (settings.output.overlayPort === snap.port) return;
+    try {
+      saveSettings({
+        ...settings,
+        output: { ...settings.output, overlayPort: snap.port },
+      });
+      logger.info("Persisted remapped overlay port to settings", { port: snap.port });
+    } catch (err) {
+      logger.warn("Failed to persist remapped overlay port", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
   private emitStatus(status: OutputConnectionStatus, detail?: string): void {
     for (const cb of this.statusListeners) {
       try {
@@ -198,6 +246,16 @@ export class OutputController {
     } catch {
       /* ignore */
     }
+  }
+
+  private pushOverlayStatus(): OverlayStatusSnapshot {
+    const snap = this.overlay.getStatusSnapshot();
+    try {
+      this.window?.webContents.send(IpcEvents.OVERLAY_STATUS, snap);
+    } catch {
+      /* ignore */
+    }
+    return snap;
   }
 }
 

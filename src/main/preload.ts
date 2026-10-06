@@ -57,6 +57,8 @@ const api: VerseFlowApi = {
     ipcRenderer.invoke(IpcChannels.OUTPUT_SEND_LIVE, payload),
   clearLiveOutput: () => ipcRenderer.invoke(IpcChannels.OUTPUT_CLEAR_LIVE),
   getOverlayInfo: () => ipcRenderer.invoke(IpcChannels.OUTPUT_GET_OVERLAY_INFO),
+  restartOverlay: () => ipcRenderer.invoke(IpcChannels.OUTPUT_RESTART_OVERLAY),
+  openOverlay: () => ipcRenderer.invoke(IpcChannels.OUTPUT_OPEN_OVERLAY),
   onSttStatus: (cb) =>
     subscribe<{ status: SttStatusDto; detail?: string }>(IpcEvents.STT_STATUS, cb),
   onSttTranscript: (cb) => subscribe<TranscriptEventDto>(IpcEvents.STT_TRANSCRIPT, cb),
@@ -68,6 +70,7 @@ const api: VerseFlowApi = {
       IpcEvents.VMIX_STATUS,
       cb,
     ),
+  onOverlayStatus: (cb) => subscribe(IpcEvents.OVERLAY_STATUS, cb),
   log: (level, message) => ipcRenderer.invoke(IpcChannels.LOG_WRITE, level, message),
 };
 

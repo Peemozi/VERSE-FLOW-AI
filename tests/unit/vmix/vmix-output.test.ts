@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+import http from "node:http";
 import { MockVmixServer } from "../../../src/main/vmix/MockVmixServer";
 import { VmixClient, buildSetTextUrl } from "../../../src/main/vmix/VmixClient";
 import { VmixOutputAdapter } from "../../../src/main/vmix/VmixOutputAdapter";
@@ -207,5 +208,64 @@ describe("OverlayServer", () => {
     ).json()) as { theme: string; payload: { secondaryTranslationId: string } };
     expect(state.theme).toBe("bilingual");
     expect(state.payload.secondaryTranslationId).toBe("OYCB");
+  });
+
+  it("serves /health JSON", async () => {
+    const server = new OverlayServer({
+      host: "127.0.0.1",
+      port: 0,
+      theme: "minimal",
+      enabled: true,
+    });
+    servers.push(server);
+    await server.start();
+    const res = await fetch(`http://127.0.0.1:${server.getConfig().port}/health`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { ok: boolean; theme: string; port: number };
+    expect(body.ok).toBe(true);
+    expect(body.theme).toBe("minimal");
+    expect(body.port).toBe(server.getConfig().port);
+  });
+
+  it("remaps to next port when preferred is busy (no crash)", async () => {
+    const blocker = http.createServer((_req, res) => {
+      res.end("busy");
+    });
+    await new Promise<void>((resolve) => blocker.listen(0, "127.0.0.1", () => resolve()));
+    const busyPort = (blocker.address() as { port: number }).port;
+
+    const server = new OverlayServer({
+      host: "127.0.0.1",
+      port: busyPort,
+      theme: "clean-lower-third",
+      enabled: true,
+    });
+    servers.push(server);
+    await server.start();
+
+    expect(server.isListening()).toBe(true);
+    expect(server.getConfig().port).toBe(busyPort + 1);
+    const snap = server.getStatusSnapshot();
+    expect(snap.remapped).toBe(true);
+    expect(snap.preferredPort).toBe(busyPort);
+    expect(snap.error).toBeNull();
+
+    const health = await fetch(server.getOverlayUrl().replace(/\/overlay$/, "/health"));
+    expect(health.status).toBe(200);
+
+    await new Promise<void>((resolve) => blocker.close(() => resolve()));
+  });
+
+  it("does not throw when disabled", async () => {
+    const server = new OverlayServer({
+      host: "127.0.0.1",
+      port: 8791,
+      theme: "minimal",
+      enabled: false,
+    });
+    servers.push(server);
+    await server.start();
+    expect(server.isListening()).toBe(false);
+    expect(server.getStatusSnapshot().status).toBe("disabled");
   });
 });

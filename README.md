@@ -8,7 +8,19 @@ AI-powered church scripture presentation for Windows. Listens for spoken Bible r
 
 Electron · React · Vite · TypeScript · Tailwind · shadcn/ui · Zustand · SQLite (`better-sqlite3`) · Zod · Vitest
 
-## Quick start
+## Quick start (Windows church PC)
+
+Overlay + vMix run **locally** on the same machine (`127.0.0.1`). Open the project in Cursor Desktop or clone once you have a real Git remote:
+
+```bat
+git checkout cursor/verseflow-phase1-2-8ac8
+npm install
+npm run rebuild:native
+npm run bible:import
+npm run dev
+```
+
+If the Cursor remote is still **`agent_temp`**, use **Create repo**, push this branch, then clone that URL on the church PC. Details: [docs/VMIX_INTEGRATION.md](docs/VMIX_INTEGRATION.md).
 
 ```bash
 npm install

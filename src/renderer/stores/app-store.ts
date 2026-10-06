@@ -12,7 +12,7 @@ import type {
   TranslationInfo,
   YorubaDiagnosticDto,
 } from "@shared/schemas";
-import type { BibleBookInfo } from "@shared/types/ipc";
+import type { BibleBookInfo, OverlayStatusDto } from "@shared/types/ipc";
 import { APP_NAME, DEFAULT_SETTINGS } from "@shared/constants/app";
 import { shouldAutoLive } from "@shared/operator/workflow";
 import { listInputDevices, startAudioCapture, type AudioCaptureHandle, type CapturedDevice } from "@/lib/audio-capture";
@@ -55,6 +55,7 @@ interface AppState {
   history: OperatorEventDto[];
   vmixDetail: string | null;
   overlayUrl: string | null;
+  overlayStatus: OverlayStatusDto | null;
   diagnosticsText: string;
   diagnosticsResult: YorubaDiagnosticDto | null;
   diagnosticsLoading: boolean;
@@ -91,6 +92,15 @@ interface AppState {
   focusBibleSearch: () => void;
   testVmixConnection: () => Promise<void>;
   connectVmix: () => Promise<void>;
+  refreshOverlayStatus: () => Promise<void>;
+  restartOverlay: () => Promise<void>;
+  openOverlay: () => Promise<void>;
+  copyOverlayUrl: () => Promise<void>;
+  sendTestVerse: (payload: {
+    referenceLabel: string;
+    verseText: string;
+    translationId: string;
+  }) => Promise<{ overlayOk: boolean; errors: string[] }>;
   setDiagnosticsText: (text: string) => void;
   runDiagnostics: () => Promise<void>;
 }
@@ -204,6 +214,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   history: [],
   vmixDetail: null,
   overlayUrl: null,
+  overlayStatus: null,
   diagnosticsText: "Johanu ori meta ese merindilogun",
   diagnosticsResult: null,
   diagnosticsLoading: false,
@@ -280,6 +291,21 @@ export const useAppStore = create<AppState>((set, get) => ({
             vmixDetail: detail ?? null,
           }));
         }),
+        window.verseflow.onOverlayStatus((snap) => {
+          set((s) => ({
+            overlayStatus: snap,
+            overlayUrl: snap.url,
+            status: s.status
+              ? { ...s.status, overlayUrl: snap.url, overlayListening: snap.listening }
+              : s.status,
+            settings: snap.remapped
+              ? {
+                  ...s.settings,
+                  output: { ...s.settings.output, overlayPort: snap.port },
+                }
+              : s.settings,
+          }));
+        }),
       ];
 
       set({
@@ -295,12 +321,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       });
       await get().refreshAudioDevices();
       await get().refreshHistory();
-      try {
-        const overlay = await window.verseflow.getOverlayInfo();
-        set({ overlayUrl: overlay.url });
-      } catch {
-        /* optional */
-      }
+      await get().refreshOverlayStatus();
     } catch (err) {
       set({
         loading: false,
@@ -322,6 +343,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
     const saved = await window.verseflow.setSettings(settings);
     set({ settings: saved });
+    await get().refreshOverlayStatus();
   },
 
   setView: (view) => {
@@ -775,6 +797,82 @@ export const useAppStore = create<AppState>((set, get) => ({
     } catch (err) {
       set({ error: err instanceof Error ? err.message : String(err) });
     }
+  },
+
+  refreshOverlayStatus: async () => {
+    if (!hasApi()) return;
+    try {
+      const snap = await window.verseflow.getOverlayInfo();
+      set((s) => ({
+        overlayStatus: snap,
+        overlayUrl: snap.url,
+        status: s.status
+          ? { ...s.status, overlayUrl: snap.url, overlayListening: snap.listening }
+          : s.status,
+        settings: snap.remapped
+          ? { ...s.settings, output: { ...s.settings.output, overlayPort: snap.port } }
+          : s.settings,
+      }));
+    } catch {
+      /* optional before overlay ready */
+    }
+  },
+
+  restartOverlay: async () => {
+    if (!hasApi()) return;
+    try {
+      const snap = await window.verseflow.restartOverlay();
+      const settings = await window.verseflow.getSettings();
+      set((s) => ({
+        settings,
+        overlayStatus: snap,
+        overlayUrl: snap.url,
+        status: s.status
+          ? { ...s.status, overlayUrl: snap.url, overlayListening: snap.listening }
+          : s.status,
+        error: snap.error && snap.status === "error" ? snap.error : null,
+      }));
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : String(err) });
+    }
+  },
+
+  openOverlay: async () => {
+    if (!hasApi()) return;
+    try {
+      const result = await window.verseflow.openOverlay();
+      if (!result.ok) {
+        set({ error: result.error ?? "Could not open overlay URL" });
+      }
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : String(err) });
+    }
+  },
+
+  copyOverlayUrl: async () => {
+    const url =
+      get().overlayStatus?.url ??
+      get().overlayUrl ??
+      `http://127.0.0.1:${get().settings.output.overlayPort}/overlay`;
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : "Clipboard copy failed" });
+    }
+  },
+
+  sendTestVerse: async (payload) => {
+    if (!hasApi()) {
+      return { overlayOk: false, errors: ["Desktop bridge unavailable"] };
+    }
+    const result = await window.verseflow.sendLiveOutput(payload);
+    await get().refreshOverlayStatus();
+    if (!result.overlayOk) {
+      set({ error: result.errors.join("; ") || "Overlay test send failed" });
+    } else {
+      set({ error: null });
+    }
+    return { overlayOk: result.overlayOk, errors: result.errors };
   },
 
   setDiagnosticsText: (text) => set({ diagnosticsText: text }),

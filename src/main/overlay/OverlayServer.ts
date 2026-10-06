@@ -26,6 +26,24 @@ export interface OverlayServerConfig {
   enabled: boolean;
 }
 
+/** How many alternate ports to try after the preferred port is busy. */
+export const OVERLAY_PORT_FALLBACK_COUNT = 9;
+
+export type OverlayListenStatus = "stopped" | "listening" | "error" | "disabled";
+
+export interface OverlayStatusSnapshot {
+  status: OverlayListenStatus;
+  url: string;
+  host: string;
+  port: number;
+  preferredPort: number;
+  remapped: boolean;
+  listening: boolean;
+  enabled: boolean;
+  theme: OverlayThemeId;
+  error: string | null;
+}
+
 function resolveOverlayDir(): string {
   const candidates = [
     path.join(getResourcesRoot(), "overlay"),
@@ -57,9 +75,13 @@ export class OverlayServer {
   private config: OverlayServerConfig;
   private state: OverlayState;
   private clients = new Set<WebSocket>();
+  private preferredPort: number;
+  private lastError: string | null = null;
+  private remapped = false;
 
   constructor(config: OverlayServerConfig) {
     this.config = config;
+    this.preferredPort = config.port;
     this.state = {
       visible: false,
       theme: config.theme,
@@ -70,6 +92,10 @@ export class OverlayServer {
 
   updateConfig(partial: Partial<OverlayServerConfig>): void {
     this.config = { ...this.config, ...partial };
+    if (partial.port !== undefined) {
+      this.preferredPort = partial.port;
+      this.remapped = false;
+    }
     if (partial.theme) {
       this.state = { ...this.state, theme: partial.theme, updatedAt: new Date().toISOString() };
       this.broadcast();
@@ -88,19 +114,106 @@ export class OverlayServer {
     return `http://${this.config.host}:${this.config.port}/overlay`;
   }
 
+  getLastError(): string | null {
+    return this.lastError;
+  }
+
+  getStatusSnapshot(): OverlayStatusSnapshot {
+    const listening = this.isListening();
+    let status: OverlayListenStatus = "stopped";
+    if (!this.config.enabled) status = "disabled";
+    else if (listening) status = "listening";
+    else if (this.lastError) status = "error";
+    return {
+      status,
+      url: this.getOverlayUrl(),
+      host: this.config.host,
+      port: this.config.port,
+      preferredPort: this.preferredPort,
+      remapped: this.remapped,
+      listening,
+      enabled: this.config.enabled,
+      theme: this.config.theme,
+      error: this.lastError,
+    };
+  }
+
   isListening(): boolean {
     return this.server !== null && this.server.listening;
   }
 
+  /**
+   * Bind HTTP + WS. On EADDRINUSE, tries preferredPort+1 … +OVERLAY_PORT_FALLBACK_COUNT.
+   * Never throws for bind failures — sets lastError and leaves listening=false so Electron stays up.
+   */
   async start(): Promise<void> {
     if (!this.config.enabled) {
+      this.lastError = null;
+      this.remapped = false;
       logger.info("Overlay server not started — disabled");
       return;
     }
     if (this.isListening()) return;
 
     const overlayDir = resolveOverlayDir();
+    if (!fs.existsSync(path.join(overlayDir, "index.html"))) {
+      this.lastError = `Overlay assets missing at ${overlayDir} (expected index.html)`;
+      logger.warn("Overlay start aborted — missing assets", { overlayDir });
+      return;
+    }
 
+    const preferred = this.preferredPort;
+    const candidates = [
+      preferred,
+      ...Array.from({ length: OVERLAY_PORT_FALLBACK_COUNT }, (_, i) => preferred + i + 1),
+    ];
+
+    let lastBindError: string | null = null;
+    for (const port of candidates) {
+      try {
+        await this.listenOn(port, overlayDir);
+        this.lastError = null;
+        this.remapped = port !== preferred;
+        if (this.remapped) {
+          logger.warn("Overlay preferred port busy; remapped", {
+            from: preferred,
+            to: port,
+            url: this.getOverlayUrl(),
+          });
+        } else {
+          logger.info("Overlay server listening", {
+            url: this.getOverlayUrl(),
+            theme: this.config.theme,
+          });
+        }
+        return;
+      } catch (err) {
+        const code = err && typeof err === "object" && "code" in err ? String((err as { code: unknown }).code) : "";
+        const message = err instanceof Error ? err.message : String(err);
+        lastBindError = code === "EADDRINUSE"
+          ? `Port ${port} is already in use`
+          : message;
+        await this.teardownServer();
+        if (code !== "EADDRINUSE") {
+          this.lastError = `Overlay failed to start: ${message}. Free the port or change Settings → OUTPUT → Port, then Restart Overlay Server.`;
+          logger.warn("Overlay start failed", { port, error: message, code });
+          return;
+        }
+      }
+    }
+
+    const rangeEnd = candidates[candidates.length - 1]!;
+    this.lastError =
+      `Ports ${preferred}–${rangeEnd} are busy on ${this.config.host}. ` +
+      `Close the other app (or change Settings → OUTPUT → Port) and click Restart Overlay Server.`;
+    logger.warn("Overlay start failed — all candidate ports busy", {
+      preferred,
+      rangeEnd,
+    });
+    void lastBindError;
+  }
+
+  private async listenOn(port: number, overlayDir: string): Promise<void> {
     this.server = http.createServer((req, res) => {
       try {
         this.handleHttp(req, res, overlayDir);
@@ -130,21 +243,18 @@ export class OverlayServer {
 
     await new Promise<void>((resolve, reject) => {
       this.server!.once("error", reject);
-      this.server!.listen(this.config.port, this.config.host, () => resolve());
+      this.server!.listen(port, this.config.host, () => resolve());
     });
 
     const addr = this.server.address();
     if (typeof addr === "object" && addr) {
       this.config = { ...this.config, port: addr.port };
+    } else {
+      this.config = { ...this.config, port };
     }
-
-    logger.info("Overlay server listening", {
-      url: this.getOverlayUrl(),
-      theme: this.config.theme,
-    });
   }
 
-  async stop(): Promise<void> {
+  private async teardownServer(): Promise<void> {
     for (const ws of this.clients) {
       try {
         ws.close();
@@ -171,6 +281,14 @@ export class OverlayServer {
       this.server.close(() => resolve());
     });
     this.server = null;
+  }
+
+  async stop(): Promise<void> {
+    await this.teardownServer();
+    this.remapped = false;
+    if (this.config.enabled) {
+      this.lastError = null;
+    }
   }
 
   async sendLive(payload: LiveScripturePayload): Promise<void> {
@@ -215,7 +333,14 @@ export class OverlayServer {
 
     if (url.pathname === "/health") {
       res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ ok: true, theme: this.config.theme }));
+      res.end(
+        JSON.stringify({
+          ok: true,
+          theme: this.config.theme,
+          port: this.config.port,
+          host: this.config.host,
+        }),
+      );
       return;
     }
 
