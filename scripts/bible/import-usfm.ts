@@ -52,7 +52,12 @@ async function downloadFile(url: string, dest: string): Promise<void> {
 
 function unzip(zipPath: string, destDir: string): void {
   ensureDir(destDir);
-  execSync(`unzip -o -q "${zipPath}" -d "${destDir}"`, { stdio: "inherit" });
+  // Windows has no `unzip`; its bundled bsdtar (tar.exe) extracts zip archives.
+  const cmd =
+    process.platform === "win32"
+      ? `tar -xf "${zipPath}" -C "${destDir}"`
+      : `unzip -o -q "${zipPath}" -d "${destDir}"`;
+  execSync(cmd, { stdio: "inherit" });
 }
 
 function findUsfmFiles(dir: string): string[] {

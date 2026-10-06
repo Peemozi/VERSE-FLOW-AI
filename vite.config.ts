@@ -17,6 +17,8 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
+    // scripts/dev.mjs and Electron target 127.0.0.1; "localhost" may bind IPv6-only on Windows.
+    host: "127.0.0.1",
     port: 5179,
     strictPort: true,
   },
