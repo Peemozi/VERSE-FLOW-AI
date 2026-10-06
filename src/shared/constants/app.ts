@@ -1,0 +1,35 @@
+import type { AppSettings } from "../schemas";
+
+/** Central app identity — change here to rename the product. */
+export const APP_NAME = "VerseFlow AI" as const;
+export const APP_ID = "verseflow-ai" as const;
+export const APP_VERSION = "0.1.0" as const;
+
+export const DEFAULT_SETTINGS: AppSettings = {
+  general: {
+    languageMode: "english",
+    startMinimized: false,
+  },
+  bible: {
+    defaultTranslationId: "WEB",
+    secondaryTranslationId: "OYCB",
+  },
+  detection: {
+    mode: "assisted",
+    minConfidence: 0.7,
+  },
+  vmix: {
+    host: "127.0.0.1",
+    httpPort: 8088,
+    tcpPort: 8099,
+    enabled: false,
+  },
+  appearance: {
+    theme: "dark",
+  },
+  advanced: {
+    logLevel: "info",
+  },
+};
+
+export type { AppSettings };
