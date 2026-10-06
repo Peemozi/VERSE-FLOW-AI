@@ -3,6 +3,7 @@ import { z } from "zod";
 import { APP_NAME, APP_VERSION } from "../../shared/constants/app";
 import {
   AppSettingsSchema,
+  DiagnoseTranscriptRequestSchema,
   HistoryExportFormatSchema,
   LanguageModeSchema,
   LiveScripturePayloadSchema,
@@ -15,6 +16,7 @@ import { BibleRepository } from "../database/BibleRepository";
 import { loadSettings, saveSettings } from "../settings/store";
 import { logger } from "../security/logger";
 import { getScriptureDetector, resetScriptureDetector } from "../scripture/detectorService";
+import { diagnoseTranscript } from "../scripture/yorubaDiagnostics";
 import { getLiveSession } from "../transcription/LiveSessionController";
 import { GoogleCloudSpeechProvider } from "../transcription/GoogleCloudSpeechProvider";
 import { getSessionHistory } from "../sessions";
@@ -114,6 +116,14 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(IpcChannels.DETECTION_RESET, () => {
     resetScriptureDetector();
+  });
+
+  ipcMain.handle(IpcChannels.DETECTION_DIAGNOSE, (_event, payload: unknown) => {
+    const req = DiagnoseTranscriptRequestSchema.parse(payload);
+    return diagnoseTranscript(req.text, {
+      languages: req.languages ?? ["yo", "en"],
+      numberLanguage: req.numberLanguage ?? "yo",
+    });
   });
 
   ipcMain.handle(IpcChannels.STT_GET_CAPABILITIES, () => getLiveSession().getCapabilities());

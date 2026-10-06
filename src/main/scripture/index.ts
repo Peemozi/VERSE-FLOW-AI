@@ -1,4 +1,5 @@
 export * from "./yorubaNormalizer";
+export * from "./yorubaDiagnostics";
 export * from "./transcriptNormalizer";
 export * from "./numberNormalizer";
 export * from "./bookAliasEngine";

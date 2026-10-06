@@ -70,6 +70,32 @@ export function SettingsPanel() {
           </select>
         </div>
         <div className="space-y-1">
+          <Label htmlFor="secondary-tr">Secondary (bilingual overlay)</Label>
+          <select
+            id="secondary-tr"
+            className="flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+            value={settings.bible.secondaryTranslationId ?? ""}
+            onChange={(e) =>
+              patch({
+                bible: {
+                  ...settings.bible,
+                  secondaryTranslationId: e.target.value || null,
+                },
+              })
+            }
+          >
+            <option value="">None</option>
+            {(translations.length ? translations : [{ id: "OYCB", name: "OYCB" }]).map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.id}
+              </option>
+            ))}
+          </select>
+          <p className="text-[11px] text-muted-foreground">
+            On Send Live, fetches this translation for the bilingual overlay theme.
+          </p>
+        </div>
+        <div className="space-y-1">
           <Label htmlFor="det-mode">Detection mode</Label>
           <select
             id="det-mode"

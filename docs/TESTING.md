@@ -9,7 +9,7 @@ npm run lint        # ESLint
 npm run build       # main + renderer production build
 ```
 
-## Current coverage (Phase 1–6)
+## Current coverage (Phase 1–7)
 
 - Settings Zod schema + defaults
 - App name constant
@@ -29,6 +29,7 @@ npm run build       # main + renderer production build
 - SessionHistoryRepository operator events
 - Mock vMix HTTP/TCP: SetText URL encoding, title fields, Overlay In/Out
 - OverlayServer: serve `/overlay`, LIVE state API, bilingual theme payload
+- Yoruba hardening: OYCB aliases, numbers 1–176, ori/ese speech, diagnostics
 
 ## Later
 

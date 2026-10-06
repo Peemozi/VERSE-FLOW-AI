@@ -2,6 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { ENGLISH_NUMBER_MAP } from "./numbers.en";
 import { normalizeForMatch } from "./yorubaNormalizer";
+import {
+  buildYorubaNumberMap,
+  verifiedYorubaBases,
+} from "../../shared/scripture/yorubaNumbers";
 
 export type NumberLanguage = "en" | "yo" | "auto";
 
@@ -16,15 +20,43 @@ function loadYorubaNumberMap(): Record<string, number> {
   for (const file of candidates) {
     if (!fs.existsSync(file)) continue;
     const raw = JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, unknown>;
-    const map: Record<string, number> = {};
+    const verified: Record<string, number> = {};
+    const overrides: Record<string, number> = {};
+    const flat: Record<string, number> = {};
+
+    const verifiedBlock = (raw._verified as Record<string, unknown> | undefined) ?? {};
+    const overrideBlock = (raw._overrides as Record<string, unknown> | undefined) ?? {};
+
+    for (const [k, v] of Object.entries(verifiedBlock)) {
+      if (typeof v === "number") verified[normalizeForMatch(k)] = v;
+    }
+    for (const [k, v] of Object.entries(overrideBlock)) {
+      if (typeof v === "number") overrides[normalizeForMatch(k)] = v;
+    }
     for (const [k, v] of Object.entries(raw)) {
       if (k.startsWith("_")) continue;
-      if (typeof v === "number") map[normalizeForMatch(k)] = v;
+      if (typeof v === "number") flat[normalizeForMatch(k)] = v;
     }
-    yoMapCache = map;
-    return map;
+
+    // Prefer file flat entries (includes generated + verified); fill gaps via builder
+    const built = buildYorubaNumberMap(176, {
+      verified: Object.keys(verified).length ? verified : verifiedYorubaBases(),
+      overrides,
+    });
+    const merged: Record<string, number> = {};
+    for (const [k, v] of Object.entries(built)) {
+      merged[normalizeForMatch(k)] = v;
+    }
+    Object.assign(merged, flat);
+    Object.assign(merged, overrides);
+    yoMapCache = merged;
+    return yoMapCache;
   }
-  yoMapCache = {};
+
+  const built = buildYorubaNumberMap(176, { verified: verifiedYorubaBases() });
+  yoMapCache = Object.fromEntries(
+    Object.entries(built).map(([k, v]) => [normalizeForMatch(k), v]),
+  );
   return yoMapCache;
 }
 
@@ -33,6 +65,14 @@ export function setYorubaNumberMapForTests(map: Record<string, number>): void {
   yoMapCache = Object.fromEntries(
     Object.entries(map).map(([k, v]) => [normalizeForMatch(k), v]),
   );
+}
+
+export function resetYorubaNumberMapForTests(): void {
+  yoMapCache = null;
+}
+
+export function getYorubaNumberMap(): Record<string, number> {
+  return { ...loadYorubaNumberMap() };
 }
 
 export function parseSpokenNumber(
@@ -53,7 +93,6 @@ export function parseSpokenNumber(
   if (tryEn) {
     const en = ENGLISH_NUMBER_MAP[key];
     if (en != null) return en;
-    // hyphenated twenty-one → twenty one
     const spaced = key.replace(/-/g, " ");
     if (ENGLISH_NUMBER_MAP[spaced] != null) return ENGLISH_NUMBER_MAP[spaced];
   }
@@ -76,7 +115,8 @@ export function digitizeSpokenNumbers(text: string, language: NumberLanguage = "
   let i = 0;
   while (i < tokens.length) {
     let matched = false;
-    for (let len = Math.min(6, tokens.length - i); len >= 1; len--) {
+    // Allow longer Yoruba compounds ("ogorun ati merindilogun")
+    for (let len = Math.min(8, tokens.length - i); len >= 1; len--) {
       const slice = tokens.slice(i, i + len).join(" ");
       const n = parseSpokenNumber(slice, language);
       if (n != null && !/^\d+$/.test(slice)) {

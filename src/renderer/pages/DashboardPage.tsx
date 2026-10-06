@@ -6,6 +6,7 @@ import { AudioPanel } from "@/features/live/AudioPanel";
 import { BibleSearchPanel } from "@/features/bible/BibleSearchPanel";
 import { SettingsPanel } from "@/features/settings/SettingsPanel";
 import { HistoryPanel } from "@/features/history/HistoryPanel";
+import { DiagnosticsPanel } from "@/features/diagnostics/DiagnosticsPanel";
 import { useAppStore } from "@/stores/app-store";
 import { useOperatorShortcuts } from "@/hooks/useOperatorShortcuts";
 
@@ -28,6 +29,8 @@ export function DashboardPage() {
 
         {view === "history" ? (
           <HistoryPanel />
+        ) : view === "diagnostics" ? (
+          <DiagnosticsPanel />
         ) : (
           <>
             <div className="grid flex-1 gap-3 lg:grid-cols-[1.1fr_1.1fr_0.9fr]">

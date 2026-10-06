@@ -1,5 +1,10 @@
 import type { CanonicalBookId } from "../../shared/scripture/books";
-import { findBookAliasesInText, type AliasLanguage } from "./bookAliasEngine";
+import {
+  aliasConfidenceBoost,
+  findBookAliasesInText,
+  type AliasLanguage,
+  type AliasSource,
+} from "./bookAliasEngine";
 
 export function resolveBookHint(
   bookHint: string,
@@ -8,6 +13,8 @@ export function resolveBookHint(
   bookId: CanonicalBookId;
   language: AliasLanguage;
   aliasScore: number;
+  alias: string;
+  source: AliasSource;
 } | null {
   const hint = bookHint.trim().replace(/\./g, "");
   if (!hint) return null;
@@ -24,17 +31,21 @@ export function resolveBookHint(
       return {
         bookId: best.bookId,
         language: best.language,
-        aliasScore: Math.min(1, Math.max(0.55, coverage)),
+        alias: best.alias,
+        source: best.source,
+        aliasScore: Math.min(1, Math.max(0.55, coverage)) * aliasConfidenceBoost(best.source),
       };
     }
   }
 
   const hits = findBookAliasesInText(hint, languages);
   if (hits.length === 0) return null;
-  const best = hits[0];
+  const best = hits[0]!;
   return {
     bookId: best.bookId,
     language: best.language,
-    aliasScore: 0.7,
+    alias: best.alias,
+    source: best.source,
+    aliasScore: 0.7 * aliasConfidenceBoost(best.source),
   };
 }

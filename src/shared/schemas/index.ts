@@ -197,6 +197,51 @@ export const OutputSendResultSchema = z.object({
 });
 export type OutputSendResult = z.infer<typeof OutputSendResultSchema>;
 
+export const YorubaDiagnosticSchema = z.object({
+  originalTranscript: z.string(),
+  normalizedTranscript: z.string(),
+  digitizedTranscript: z.string(),
+  matchedAliases: z.array(
+    z.object({
+      alias: z.string(),
+      bookId: z.string(),
+      language: z.enum(["en", "yo"]),
+      source: z.string(),
+      start: z.number(),
+      end: z.number(),
+    }),
+  ),
+  parsedNumbers: z.array(
+    z.object({
+      raw: z.string(),
+      value: z.number(),
+      tokenIndex: z.number(),
+    }),
+  ),
+  resolvedRefs: z.array(
+    z.object({
+      bookId: z.string(),
+      chapter: z.number(),
+      verse: z.number(),
+      endVerse: z.number().optional(),
+      rawMatch: z.string(),
+      matchedAlias: z.string().optional(),
+      aliasSource: z.string().optional(),
+      confidence: z.number(),
+      method: z.string(),
+    }),
+  ),
+  topConfidence: z.number().nullable(),
+});
+export type YorubaDiagnosticDto = z.infer<typeof YorubaDiagnosticSchema>;
+
+export const DiagnoseTranscriptRequestSchema = z.object({
+  text: z.string().min(1),
+  languages: z.array(z.enum(["en", "yo"])).optional(),
+  numberLanguage: z.enum(["en", "yo", "auto"]).optional(),
+});
+export type DiagnoseTranscriptRequest = z.infer<typeof DiagnoseTranscriptRequestSchema>;
+
 export const DetectionEventSchema = z.object({
   id: z.string(),
   method: DetectionMethodSchema,

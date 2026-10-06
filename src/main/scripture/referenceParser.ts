@@ -19,6 +19,8 @@ export interface RawMatch {
   hasExplicitPunctuation: boolean;
   isSpokenForm: boolean;
   aliasLanguage?: AliasLanguage;
+  matchedAlias?: string;
+  aliasSource?: string;
   confidence: number;
 }
 
@@ -101,6 +103,8 @@ export function parseReferences(transcript: string, options: ParseOptions = {}):
           hasExplicitPunctuation: m[0].includes(":"),
           isSpokenForm: /chapter|verse/.test(m[0]),
           aliasLanguage: resolved.language,
+          matchedAlias: resolved.alias,
+          aliasSource: resolved.source,
         },
         resolved.aliasScore,
       );

@@ -4,6 +4,7 @@ import type {
   BibleSearchResult,
   BibleVerseDto,
   DetectionEventDto,
+  DiagnoseTranscriptRequest,
   HistoryExportFormatSchema,
   LanguageMode,
   LiveScripturePayloadDto,
@@ -18,6 +19,7 @@ import type {
   TranslationInfo,
   VerseRef,
   VmixConnectionTestResult,
+  YorubaDiagnosticDto,
 } from "../schemas";
 import type { z } from "zod";
 
@@ -32,6 +34,7 @@ export const IpcChannels = {
   BIBLE_SEARCH: "bible:search",
   DETECTION_SIMULATE: "detection:simulate",
   DETECTION_RESET: "detection:reset",
+  DETECTION_DIAGNOSE: "detection:diagnose",
   STT_GET_CAPABILITIES: "stt:getCapabilities",
   STT_START: "stt:start",
   STT_STOP: "stt:stop",
@@ -111,6 +114,7 @@ export interface VerseFlowApi {
   }) => Promise<BibleSearchResult[]>;
   simulateTranscript: (args: SimulateTranscriptRequest) => Promise<SimulateTranscriptResponse>;
   resetDetection: () => Promise<void>;
+  diagnoseTranscript: (args: DiagnoseTranscriptRequest) => Promise<YorubaDiagnosticDto>;
   getSttCapabilities: () => Promise<SttCapabilitiesDto>;
   startListening: (args: SttStartRequest) => Promise<SttStartResponse>;
   stopListening: () => Promise<void>;

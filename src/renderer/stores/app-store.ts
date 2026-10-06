@@ -10,13 +10,14 @@ import type {
   SttStatusDto,
   TranscriptEventDto,
   TranslationInfo,
+  YorubaDiagnosticDto,
 } from "@shared/schemas";
 import type { BibleBookInfo } from "@shared/types/ipc";
 import { APP_NAME, DEFAULT_SETTINGS } from "@shared/constants/app";
 import { shouldAutoLive } from "@shared/operator/workflow";
 import { listInputDevices, startAudioCapture, type AudioCaptureHandle, type CapturedDevice } from "@/lib/audio-capture";
 
-export type AppView = "dashboard" | "history";
+export type AppView = "dashboard" | "history" | "diagnostics";
 
 interface AppState {
   status: AppStatus | null;
@@ -54,6 +55,9 @@ interface AppState {
   history: OperatorEventDto[];
   vmixDetail: string | null;
   overlayUrl: string | null;
+  diagnosticsText: string;
+  diagnosticsResult: YorubaDiagnosticDto | null;
+  diagnosticsLoading: boolean;
   bootstrap: () => Promise<void>;
   refreshStatus: () => Promise<void>;
   updateSettings: (settings: AppSettings) => Promise<void>;
@@ -87,6 +91,8 @@ interface AppState {
   focusBibleSearch: () => void;
   testVmixConnection: () => Promise<void>;
   connectVmix: () => Promise<void>;
+  setDiagnosticsText: (text: string) => void;
+  runDiagnostics: () => Promise<void>;
 }
 
 function hasApi(): boolean {
@@ -124,6 +130,36 @@ function verseToLivePayload(verse: BibleVerseDto) {
     chapter: verse.chapter,
     verse: verse.verse,
   };
+}
+
+async function buildLivePayload(
+  verse: BibleVerseDto,
+  settings: AppSettings,
+): Promise<ReturnType<typeof verseToLivePayload> & {
+  secondaryReferenceLabel?: string;
+  secondaryVerseText?: string;
+  secondaryTranslationId?: string;
+}> {
+  const base = verseToLivePayload(verse);
+  const secondaryId = settings.bible.secondaryTranslationId;
+  if (!secondaryId || secondaryId === verse.translationId || !hasApi()) {
+    return base;
+  }
+  try {
+    const secondary = await window.verseflow.getVerse({
+      translationId: secondaryId,
+      ref: { bookId: verse.bookId, chapter: verse.chapter, verse: verse.verse },
+    });
+    if (!secondary) return base;
+    return {
+      ...base,
+      secondaryReferenceLabel: secondary.referenceLabel,
+      secondaryVerseText: secondary.originalText,
+      secondaryTranslationId: secondary.translationId,
+    };
+  } catch {
+    return base;
+  }
 }
 
 function downloadTextFile(filename: string, content: string, mime: string): void {
@@ -168,6 +204,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   history: [],
   vmixDetail: null,
   overlayUrl: null,
+  diagnosticsText: "Johanu ori meta ese merindilogun",
+  diagnosticsResult: null,
+  diagnosticsLoading: false,
 
   bootstrap: async () => {
     if (!hasApi()) {
@@ -422,12 +461,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   sendPreviewToLive: async () => {
-    const { preview } = get();
+    const { preview, settings } = get();
     if (!preview) return;
     set({ live: preview });
     if (hasApi()) {
       try {
-        const result = await window.verseflow.sendLiveOutput(verseToLivePayload(preview));
+        const payload = await buildLivePayload(preview, settings);
+        const result = await window.verseflow.sendLiveOutput(payload);
         if (result.errors.length) {
           set({ error: result.errors.join("; ") });
         }
@@ -490,13 +530,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   liveFromQueueHead: async () => {
-    const { queue } = get();
+    const { queue, settings } = get();
     if (queue.length === 0) return;
     const [head, ...rest] = queue;
     set({ queue: rest, live: head, preview: head });
     if (hasApi()) {
       try {
-        const result = await window.verseflow.sendLiveOutput(verseToLivePayload(head));
+        const payload = await buildLivePayload(head, settings);
+        const result = await window.verseflow.sendLiveOutput(payload);
         if (result.errors.length) {
           set({ error: result.errors.join("; ") });
         }
@@ -730,6 +771,28 @@ export const useAppStore = create<AppState>((set, get) => ({
       }));
     } catch (err) {
       set({ error: err instanceof Error ? err.message : String(err) });
+    }
+  },
+
+  setDiagnosticsText: (text) => set({ diagnosticsText: text }),
+
+  runDiagnostics: async () => {
+    if (!hasApi()) return;
+    const text = get().diagnosticsText.trim();
+    if (!text) return;
+    set({ diagnosticsLoading: true });
+    try {
+      const result = await window.verseflow.diagnoseTranscript({
+        text,
+        languages: ["yo", "en"],
+        numberLanguage: "yo",
+      });
+      set({ diagnosticsResult: result, diagnosticsLoading: false });
+    } catch (err) {
+      set({
+        diagnosticsLoading: false,
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
   },
 }));

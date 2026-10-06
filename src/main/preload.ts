@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from "electron";
 import type {
   AppSettings,
   HistoryExportFormat,
+  DiagnoseTranscriptRequest,
   LiveScripturePayloadDto,
   RecordOperatorEventRequest,
   SimulateTranscriptRequest,
@@ -36,6 +37,8 @@ const api: VerseFlowApi = {
   simulateTranscript: (args: SimulateTranscriptRequest) =>
     ipcRenderer.invoke(IpcChannels.DETECTION_SIMULATE, args),
   resetDetection: () => ipcRenderer.invoke(IpcChannels.DETECTION_RESET),
+  diagnoseTranscript: (args: DiagnoseTranscriptRequest) =>
+    ipcRenderer.invoke(IpcChannels.DETECTION_DIAGNOSE, args),
   getSttCapabilities: () => ipcRenderer.invoke(IpcChannels.STT_GET_CAPABILITIES),
   startListening: (args: SttStartRequest) => ipcRenderer.invoke(IpcChannels.STT_START, args),
   stopListening: () => ipcRenderer.invoke(IpcChannels.STT_STOP),

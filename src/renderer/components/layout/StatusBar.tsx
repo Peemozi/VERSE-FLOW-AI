@@ -1,4 +1,4 @@
-import { Mic, Radio, Database, WifiOff, History } from "lucide-react";
+import { Mic, Radio, Database, WifiOff, History, Stethoscope } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAppStore } from "@/stores/app-store";
 import { APP_NAME } from "@shared/constants/app";
@@ -54,7 +54,7 @@ export function StatusBar() {
         </div>
         <div>
           <h1 className="font-display text-lg font-semibold tracking-tight text-foreground">{APP_NAME}</h1>
-          <p className="text-xs text-muted-foreground">Operator dashboard · Phase 1–6</p>
+          <p className="text-xs text-muted-foreground">Operator dashboard · Phase 1–7</p>
         </div>
       </div>
       <div className="flex flex-wrap items-center justify-end gap-2">
@@ -77,6 +77,14 @@ export function StatusBar() {
         {live ? <StatusPill label="LIVE" tone="live" /> : null}
         <Button size="sm" variant="destructive" onClick={() => void clearLive()}>
           Clear Live
+        </Button>
+        <Button
+          size="sm"
+          variant={view === "diagnostics" ? "default" : "outline"}
+          onClick={() => setView(view === "diagnostics" ? "dashboard" : "diagnostics")}
+        >
+          <Stethoscope className="h-4 w-4" />
+          Diagnostics
         </Button>
         <Button
           size="sm"

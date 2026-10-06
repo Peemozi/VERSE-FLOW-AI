@@ -75,10 +75,12 @@ Phased delivery. Check items when implemented and verified.
 
 ## Phase 7 — Yoruba hardening
 
-- [ ] `yorubaNormalizer.ts` (match vs display)
-- [ ] Book aliases EN/YO (editable)
-- [ ] Number normalizers EN/YO
-- [ ] `docs/YORUBA_SUPPORT.md`
+- [x] `yorubaNormalizer.ts` (match vs display; underdot fold)
+- [x] Book aliases EN/YO from OYCB metadata + `_uncertain` / `_asr` tiers
+- [x] Number normalizers EN/YO (1–176; reviewer-correctable JSON)
+- [x] Yoruba detection tests (verified aliases only)
+- [x] Developer diagnostics screen
+- [x] `docs/YORUBA_SUPPORT.md`
 
 ## Phase 8 — Quotation detection
 
@@ -105,7 +107,7 @@ Phased delivery. Check items when implemented and verified.
 | docs/ROADMAP.md | Done |
 | docs/BIBLE_DATA.md | Done (Phase 2) |
 | docs/TESTING.md | Done (Phase 1–2) |
-| docs/YORUBA_SUPPORT.md | Deferred (Phase 7) |
+| docs/YORUBA_SUPPORT.md | Done (Phase 7) |
 | docs/VMIX_INTEGRATION.md | Done (Phase 6) |
 | docs/TRANSCRIPTION.md | Done (Phase 4) |
 | docs/SECURITY.md | Stub (Phase 1) |
