@@ -54,7 +54,7 @@ export function StatusBar() {
         </div>
         <div>
           <h1 className="font-display text-lg font-semibold tracking-tight text-foreground">{APP_NAME}</h1>
-          <p className="text-xs text-muted-foreground">Operator dashboard · Phase 1–7</p>
+          <p className="text-xs text-muted-foreground">Operator dashboard · Phase 1–8</p>
         </div>
       </div>
       <div className="flex flex-wrap items-center justify-end gap-2">

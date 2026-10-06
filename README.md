@@ -2,7 +2,7 @@
 
 AI-powered church scripture presentation for Windows. Listens for spoken Bible references (English / Yoruba), resolves them against a local Bible database, and drives operator Preview/Live workflow toward vMix and a browser overlay.
 
-**Phase status:** Phases 1–7 implemented (foundation through Yoruba hardening). Quotation/semantic detection and packaging come next.
+**Phase status:** Phases 1–8 implemented (foundation through quotation detection). Semantic detection and packaging come next.
 
 ## Stack
 
@@ -68,6 +68,5 @@ Configured centrally in `src/shared/constants/app.ts` as **VerseFlow AI**.
 
 ## Phases (next)
 
-8 · Quotation detection  
 9 · Semantic detection  
 10 · Packaging (electron-builder)

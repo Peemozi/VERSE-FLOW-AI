@@ -3,6 +3,7 @@ import { BibleRepository } from "../database/BibleRepository";
 import { getDatabase } from "../database/connection";
 import { loadSettings } from "../settings/store";
 import type { AliasLanguage } from "./bookAliasEngine";
+import { QuotationDetector } from "./QuotationDetector";
 import { ScriptureDetector } from "./ScriptureDetector";
 
 let detector: ScriptureDetector | null = null;
@@ -23,11 +24,32 @@ function buildDetector(): ScriptureDetector {
   const settings = loadSettings();
   const repo = new BibleRepository(getDatabase());
   repo.seedCanonicalBooks();
+  // Ensure FTS is populated if verses exist but index is empty (upgrade path)
+  try {
+    for (const t of repo.listTranslations()) {
+      if (t.verseCount > 0 && repo.getFtsCount(t.id) === 0) {
+        repo.rebuildFtsForTranslation(t.id);
+      }
+    }
+  } catch {
+    /* FTS optional until migration applied */
+  }
   const translationId = settings.bible.defaultTranslationId;
+
+  const quotationDetector = new QuotationDetector({
+    repo,
+    translationId,
+    settings: {
+      enabled: settings.detection.quotationEnabled,
+      minChars: settings.detection.quotationMinChars,
+      minSignificantWords: settings.detection.quotationMinWords,
+    },
+  });
 
   return new ScriptureDetector({
     translationId,
     languages: languagesForMode(settings.general.languageMode),
+    quotationDetector,
     verseExists: (bookId, chapter, verse) => {
       const anyVerses = repo.listTranslations().some((t) => t.verseCount > 0);
       if (!anyVerses) return true;
@@ -45,6 +67,11 @@ export function getScriptureDetector(): ScriptureDetector {
   } else {
     detector.setTranslationId(settings.bible.defaultTranslationId);
     detector.setLanguages(languagesForMode(settings.general.languageMode));
+    detector.updateQuotationSettings({
+      enabled: settings.detection.quotationEnabled,
+      minChars: settings.detection.quotationMinChars,
+      minSignificantWords: settings.detection.quotationMinWords,
+    });
   }
   return detector;
 }

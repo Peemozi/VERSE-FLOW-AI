@@ -94,7 +94,7 @@ Canonical book IDs are language-neutral (`GEN`, `JHN`, `1CO`, …). Verses store
 
 ## Phase boundary
 
-Phases 1–7 ship foundation through vMix/browser overlay and Yoruba hardening. Quotation/semantic detection and packaging are later — see [ROADMAP.md](./ROADMAP.md).
+Phases 1–8 ship foundation through Yoruba hardening and FTS5 quotation suggestions. Semantic detection and packaging are later — see [ROADMAP.md](./ROADMAP.md).
 
 ## Output adapters (Phase 6)
 
@@ -113,3 +113,10 @@ See [VMIX_INTEGRATION.md](./VMIX_INTEGRATION.md).
 - Diagnostics UI for original → normalized → alias → number → ref
 
 See [YORUBA_SUPPORT.md](./YORUBA_SUPPORT.md).
+
+## Quotation (Phase 8)
+
+- `bible_verses_fts` (FTS5) rebuilt on verse import
+- `QuotationDetector` + sentence buffer — runs *after* direct/contextual parsing
+- Suggestions in operator UI unless confidence ≥ `quotationMinConfidence` (default 0.9)
+- Generic / short phrases never trigger

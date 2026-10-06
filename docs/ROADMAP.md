@@ -84,8 +84,12 @@ Phased delivery. Check items when implemented and verified.
 
 ## Phase 8 — Quotation detection
 
-- [ ] FTS5 quotation search
-- [ ] Suggestion UX unless high confidence
+- [x] FTS5 quotation search (`bible_verses_fts`)
+- [x] Transcript sentence buffer + min length / generic-phrase gates
+- [x] Lexical ranking + confidence; suggestions unless high bar
+- [x] Runs after direct path (does not block)
+- [x] `shouldAutoLive` higher threshold for `quotation`
+- [x] Unit tests (match + low-confidence not auto-live)
 
 ## Phase 9 — Semantic detection
 

@@ -1,12 +1,23 @@
-import type { DetectionMode } from "../schemas";
+import type { DetectionMethod, DetectionMode } from "../schemas";
 
-/** Automatic mode sends high-confidence detections straight to LIVE. */
+/**
+ * Automatic mode sends high-confidence detections straight to LIVE.
+ * Quotation matches use a higher configurable bar than direct refs.
+ */
 export function shouldAutoLive(
   mode: DetectionMode,
   confidence: number,
   minConfidence: number,
+  options?: {
+    method?: DetectionMethod;
+    quotationMinConfidence?: number;
+  },
 ): boolean {
   if (mode !== "automatic") return false;
+  if (options?.method === "quotation") {
+    const bar = options.quotationMinConfidence ?? Math.max(minConfidence, 0.9);
+    return confidence >= bar;
+  }
   return confidence >= minConfidence;
 }
 

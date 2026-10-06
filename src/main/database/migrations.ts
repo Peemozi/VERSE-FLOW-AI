@@ -107,4 +107,17 @@ export const MIGRATIONS: Migration[] = [
         ON operator_events (session_id, created_at);
     `,
   },
+  {
+    id: "003_bible_verses_fts",
+    sql: `
+      CREATE VIRTUAL TABLE IF NOT EXISTS bible_verses_fts USING fts5(
+        normalized_text,
+        translation_id UNINDEXED,
+        book_id UNINDEXED,
+        chapter UNINDEXED,
+        verse UNINDEXED,
+        tokenize = 'unicode61 remove_diacritics 2'
+      );
+    `,
+  },
 ];

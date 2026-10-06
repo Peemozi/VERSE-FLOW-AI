@@ -34,6 +34,11 @@ export const AppSettingsSchema = z.object({
   detection: z.object({
     mode: DetectionModeSchema,
     minConfidence: z.number().min(0).max(1),
+    /** Quotation suggestions only auto-live at this higher bar (default 0.9). */
+    quotationMinConfidence: z.number().min(0).max(1),
+    quotationEnabled: z.boolean(),
+    quotationMinChars: z.number().int().positive(),
+    quotationMinWords: z.number().int().positive(),
   }),
   vmix: z.object({
     host: z.string().min(1),
@@ -257,6 +262,7 @@ export const DetectionEventSchema = z.object({
   verseText: z.string().nullable(),
   suppressed: z.boolean(),
   createdAt: z.string(),
+  isSuggestion: z.boolean().optional(),
 });
 
 export type DetectionEventDto = z.infer<typeof DetectionEventSchema>;

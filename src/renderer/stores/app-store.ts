@@ -452,7 +452,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     const top = incoming[0];
     if (!top) return;
 
-    if (shouldAutoLive(settings.detection.mode, top.confidence, settings.detection.minConfidence)) {
+    if (shouldAutoLive(settings.detection.mode, top.confidence, settings.detection.minConfidence, {
+      method: top.method,
+      quotationMinConfidence: settings.detection.quotationMinConfidence,
+    })) {
       await get().loadDetectionToPreview(top);
       await get().sendPreviewToLive();
     } else {

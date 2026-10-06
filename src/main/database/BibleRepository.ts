@@ -50,6 +50,9 @@ export class BibleRepository {
 
   clearTranslationVerses(translationId: string): void {
     this.db.prepare("DELETE FROM bible_verses WHERE translation_id = ?").run(translationId);
+    if (this.hasFtsTable()) {
+      this.db.prepare("DELETE FROM bible_verses_fts WHERE translation_id = ?").run(translationId);
+    }
   }
 
   insertVerses(verses: UpsertVerseInput[]): number {
@@ -64,7 +67,94 @@ export class BibleRepository {
       for (const row of rows) stmt.run(row);
       return rows.length;
     });
-    return tx(verses);
+    const count = tx(verses);
+    const translationIds = [...new Set(verses.map((v) => v.translationId))];
+    for (const tid of translationIds) {
+      this.rebuildFtsForTranslation(tid);
+    }
+    return count;
+  }
+
+  /** Rebuild FTS5 index for one translation (idempotent). */
+  rebuildFtsForTranslation(translationId: string): void {
+    if (!this.hasFtsTable()) return;
+    const tx = this.db.transaction(() => {
+      this.db.prepare("DELETE FROM bible_verses_fts WHERE translation_id = ?").run(translationId);
+      this.db
+        .prepare(
+          `INSERT INTO bible_verses_fts (rowid, normalized_text, translation_id, book_id, chapter, verse)
+           SELECT id, normalized_text, translation_id, book_id, chapter, verse
+           FROM bible_verses WHERE translation_id = ?`,
+        )
+        .run(translationId);
+    });
+    tx();
+  }
+
+  rebuildAllFts(): void {
+    if (!this.hasFtsTable()) return;
+    for (const t of this.listTranslations()) {
+      this.rebuildFtsForTranslation(t.id);
+    }
+  }
+
+  private hasFtsTable(): boolean {
+    const row = this.db
+      .prepare(
+        `SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'bible_verses_fts'`,
+      )
+      .get() as { name: string } | undefined;
+    return Boolean(row);
+  }
+
+  /**
+   * FTS5 quotation search. Returns ranked lexical candidates.
+   * Query should already be normalized; stopwords stripped by caller for MATCH.
+   */
+  searchQuotation(
+    translationId: string,
+    ftsQuery: string,
+    limit = 8,
+  ): Array<{
+    translationId: string;
+    bookId: string;
+    bookName: string;
+    chapter: number;
+    verse: number;
+    originalText: string;
+    normalizedText: string;
+    rank: number;
+  }> {
+    if (!this.hasFtsTable() || !ftsQuery.trim()) return [];
+    try {
+      const rows = this.db
+        .prepare(
+          `SELECT v.translation_id AS translationId, v.book_id AS bookId, b.name_en AS bookName,
+                  v.chapter, v.verse, v.original_text AS originalText, v.normalized_text AS normalizedText,
+                  bm25(bible_verses_fts) AS rank
+           FROM bible_verses_fts
+           JOIN bible_verses v ON v.id = bible_verses_fts.rowid
+           JOIN bible_books b ON b.id = v.book_id
+           WHERE bible_verses_fts.translation_id = ?
+             AND bible_verses_fts MATCH ?
+           ORDER BY rank
+           LIMIT ?`,
+        )
+        .all(translationId, ftsQuery, limit) as Array<{
+        translationId: string;
+        bookId: string;
+        bookName: string;
+        chapter: number;
+        verse: number;
+        originalText: string;
+        normalizedText: string;
+        rank: number;
+      }>;
+      return rows;
+    } catch {
+      // Bad FTS syntax — never throw into detection path
+      return [];
+    }
   }
 
   listTranslations(): TranslationInfo[] {
@@ -193,6 +283,14 @@ export class BibleRepository {
         referenceLabel: verseDto.referenceLabel,
       },
     ].slice(0, limit);
+  }
+
+  getFtsCount(translationId: string): number {
+    if (!this.hasFtsTable()) return 0;
+    const row = this.db
+      .prepare("SELECT COUNT(*) AS c FROM bible_verses_fts WHERE translation_id = ?")
+      .get(translationId) as { c: number };
+    return row.c;
   }
 
   getVerseCount(translationId: string): number {

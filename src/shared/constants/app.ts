@@ -25,6 +25,10 @@ export const DEFAULT_SETTINGS: AppSettings = {
   detection: {
     mode: "assisted",
     minConfidence: 0.7,
+    quotationMinConfidence: 0.9,
+    quotationEnabled: true,
+    quotationMinChars: 40,
+    quotationMinWords: 6,
   },
   vmix: {
     host: "127.0.0.1",

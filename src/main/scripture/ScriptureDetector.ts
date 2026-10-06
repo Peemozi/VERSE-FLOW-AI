@@ -9,6 +9,8 @@ import { formatReferenceLabel, parseReferences, type RawMatch } from "./referenc
 import { normalizeTranscript } from "./transcriptNormalizer";
 import { digitizeSpokenNumbers } from "./numberNormalizer";
 import { validateAgainstDb } from "./referenceValidator";
+import { QuotationDetector } from "./QuotationDetector";
+import type { QuotationSettings } from "./quotationMatcher";
 
 export interface DetectionEvent {
   id: string;
@@ -25,6 +27,8 @@ export interface DetectionEvent {
   verseText: string | null;
   suppressed: boolean;
   createdAt: string;
+  /** Quotation (and future semantic) suggestions until high-confidence auto-live. */
+  isSuggestion?: boolean;
 }
 
 export interface PipelineProcessResult {
@@ -47,6 +51,9 @@ export interface ScriptureDetectorOptions {
     chapter: number,
     verse: number,
   ) => BibleVerseDto | null;
+  /** Optional quotation detector — when omitted, quotation path is skipped. */
+  quotationDetector?: QuotationDetector | null;
+  quotationSettings?: Partial<QuotationSettings>;
 }
 
 let idSeq = 0;
@@ -58,8 +65,8 @@ function nextId(): string {
 const bookName = new Map(CANONICAL_BOOKS.map((b) => [b.id, b.nameEn]));
 
 /**
- * Direct + contextual scripture detector.
- * Simulation Mode and future live STT share this entrypoint.
+ * Direct + contextual scripture detector, then optional quotation (FTS) suggestions.
+ * Quotation runs *after* the direct path so reference detection stays instant.
  */
 export class ScriptureDetector {
   private readonly context: ContextTracker;
@@ -69,6 +76,7 @@ export class ScriptureDetector {
   private numberLanguage: NumberLanguage;
   private verseExists?: ScriptureDetectorOptions["verseExists"];
   private getVerseFn?: ScriptureDetectorOptions["getVerse"];
+  private quotationDetector: QuotationDetector | null;
 
   constructor(options: ScriptureDetectorOptions = {}) {
     this.context = new ContextTracker({ ttlMs: options.contextTtlMs });
@@ -78,22 +86,37 @@ export class ScriptureDetector {
     this.numberLanguage = options.numberLanguage ?? "auto";
     this.verseExists = options.verseExists;
     this.getVerseFn = options.getVerse;
+    this.quotationDetector = options.quotationDetector ?? null;
+    if (this.quotationDetector && options.quotationSettings) {
+      this.quotationDetector.updateSettings(options.quotationSettings);
+    }
   }
 
   reset(): void {
     this.context.reset();
     this.duplicates.reset();
+    this.quotationDetector?.reset();
   }
 
   setTranslationId(id: string): void {
     this.translationId = id;
+    this.quotationDetector?.setTranslationId(id);
   }
 
   setLanguages(languages: AliasLanguage[]): void {
     this.languages = languages;
   }
 
+  setQuotationDetector(detector: QuotationDetector | null): void {
+    this.quotationDetector = detector;
+  }
+
+  updateQuotationSettings(partial: Partial<QuotationSettings>): void {
+    this.quotationDetector?.updateSettings(partial);
+  }
+
   processTranscript(transcript: string, now = Date.now()): PipelineProcessResult {
+    // —— Fast path: direct + contextual (must stay instant; no FTS here) ——
     const normalizedTranscript = digitizeSpokenNumbers(
       normalizeTranscript(transcript),
       this.numberLanguage,
@@ -108,6 +131,7 @@ export class ScriptureDetector {
     });
 
     const candidates: DetectionEvent[] = [];
+    const directKeys = new Set<string>();
 
     for (const match of matches) {
       let confidence = match.confidence;
@@ -131,6 +155,9 @@ export class ScriptureDetector {
         verseText = v?.originalText ?? null;
       }
 
+      const key = `${match.bookId}:${match.chapter}:${match.verse}`;
+      directKeys.add(key);
+
       candidates.push({
         id: nextId(),
         method: match.method,
@@ -149,7 +176,41 @@ export class ScriptureDetector {
         verseText,
         suppressed: false,
         createdAt: new Date(now).toISOString(),
+        isSuggestion: false,
       });
+    }
+
+    // —— Quotation path (after direct; never blocks reference parsing) ——
+    if (this.quotationDetector) {
+      try {
+        const quotes = this.quotationDetector.detect(transcript);
+        for (const q of quotes) {
+          const key = `${q.bookId}:${q.chapter}:${q.verse}`;
+          if (directKeys.has(key)) continue;
+          if (this.verseExists) {
+            const ok = this.verseExists(q.bookId, q.chapter, q.verse);
+            if (!ok) continue;
+          }
+          candidates.push({
+            id: nextId(),
+            method: "quotation",
+            bookId: q.bookId,
+            chapter: q.chapter,
+            verse: q.verse,
+            confidence: q.confidence,
+            transcriptSnippet: transcript.trim(),
+            rawMatch: q.rawMatch,
+            referenceLabel: `${q.bookName} ${q.chapter}:${q.verse}`,
+            translationId: q.translationId || this.translationId,
+            verseText: q.originalText,
+            suppressed: false,
+            createdAt: new Date(now).toISOString(),
+            isSuggestion: true,
+          });
+        }
+      } catch {
+        // Quotation must never break the direct pipeline
+      }
     }
 
     const suppressInput = candidates.map((e) => ({
@@ -165,6 +226,7 @@ export class ScriptureDetector {
     const { kept, suppressed } = this.duplicates.filter(suppressInput, now);
 
     for (const item of kept) {
+      if (item.method === "quotation") continue;
       this.context.update(
         {
           bookId: item.bookId,
@@ -175,8 +237,17 @@ export class ScriptureDetector {
       );
     }
 
+    // Prefer direct/contextual ahead of quotation suggestions in the operator list
+    const detections = kept
+      .map((k) => k.event)
+      .sort((a, b) => {
+        const rank = (m: string) => (m === "quotation" ? 1 : 0);
+        if (rank(a.method) !== rank(b.method)) return rank(a.method) - rank(b.method);
+        return b.confidence - a.confidence;
+      });
+
     return {
-      detections: kept.map((k) => k.event),
+      detections,
       suppressed: suppressed.map((s) => ({ ...s.event, suppressed: true })),
       context: this.context.snapshot(),
       normalizedTranscript,

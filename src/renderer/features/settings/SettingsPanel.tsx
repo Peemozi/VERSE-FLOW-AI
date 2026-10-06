@@ -134,8 +134,50 @@ export function SettingsPanel() {
             }
           />
           <p className="text-[11px] text-muted-foreground">
-            Automatic mode takes detections ≥ this threshold straight to LIVE.
+            Automatic mode takes detections ≥ this threshold straight to LIVE (direct/contextual).
           </p>
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="quote-conf">Quotation auto-live confidence</Label>
+          <input
+            id="quote-conf"
+            type="number"
+            min={0}
+            max={1}
+            step={0.05}
+            className="flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+            value={settings.detection.quotationMinConfidence}
+            onChange={(e) =>
+              patch({
+                detection: {
+                  ...settings.detection,
+                  quotationMinConfidence: Number(e.target.value),
+                },
+              })
+            }
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Quotation matches stay as suggestions unless confidence ≥ this higher bar (default 0.9).
+          </p>
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="quote-enabled">Quotation detection</Label>
+          <select
+            id="quote-enabled"
+            className="flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+            value={settings.detection.quotationEnabled ? "yes" : "no"}
+            onChange={(e) =>
+              patch({
+                detection: {
+                  ...settings.detection,
+                  quotationEnabled: e.target.value === "yes",
+                },
+              })
+            }
+          >
+            <option value="yes">Enabled (FTS5, after direct)</option>
+            <option value="no">Disabled</option>
+          </select>
         </div>
 
         <div className="md:col-span-3 border-t border-border/40 pt-3">

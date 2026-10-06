@@ -8,4 +8,6 @@ export * from "./referenceValidator";
 export * from "./confidence";
 export * from "./duplicateSuppressor";
 export * from "./referenceParser";
+export * from "./quotationMatcher";
+export * from "./QuotationDetector";
 export * from "./ScriptureDetector";
