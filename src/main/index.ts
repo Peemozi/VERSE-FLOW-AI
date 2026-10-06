@@ -7,6 +7,10 @@ import { registerIpcHandlers } from "./ipc/handlers";
 import { loadSettings } from "./settings/store";
 import { logger } from "./security/logger";
 import { getLiveSession } from "./transcription/LiveSessionController";
+import {
+  getOutputController,
+  shutdownOutputController,
+} from "./vmix/OutputController";
 
 const isDev = !app.isPackaged && process.env.NODE_ENV !== "production";
 
@@ -48,9 +52,11 @@ function createWindow(): void {
   }
 
   getLiveSession().setWindow(mainWindow);
+  getOutputController().setWindow(mainWindow);
 
   mainWindow.on("closed", () => {
     getLiveSession().setWindow(null);
+    getOutputController().setWindow(null);
     mainWindow = null;
   });
 }
@@ -67,6 +73,14 @@ app.whenReady().then(() => {
   registerIpcHandlers();
   createWindow();
 
+  void getOutputController()
+    .startFromSettings()
+    .catch((err) => {
+      logger.warn("Output controller start failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    });
+
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
@@ -75,6 +89,7 @@ app.whenReady().then(() => {
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     void getLiveSession().stop();
+    void shutdownOutputController();
     closeDatabase();
     app.quit();
   }
@@ -82,5 +97,6 @@ app.on("window-all-closed", () => {
 
 app.on("before-quit", () => {
   void getLiveSession().stop();
+  void shutdownOutputController();
   closeDatabase();
 });

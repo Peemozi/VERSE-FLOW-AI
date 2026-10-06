@@ -31,6 +31,17 @@ export const DEFAULT_SETTINGS: AppSettings = {
     httpPort: 8088,
     tcpPort: 8099,
     enabled: false,
+    inputName: "Scripture",
+    fieldReference: "Reference",
+    fieldVerse: "Verse",
+    fieldTranslation: "Translation",
+    autoOverlay: false,
+    overlayChannel: 1,
+  },
+  output: {
+    overlayEnabled: true,
+    overlayPort: 8791,
+    overlayTheme: "clean-lower-third",
   },
   appearance: {
     theme: "dark",

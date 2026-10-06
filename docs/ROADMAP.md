@@ -64,10 +64,14 @@ Phased delivery. Check items when implemented and verified.
 
 ## Phase 6 — vMix + browser overlay
 
-- [ ] `VmixOutputAdapter` (HTTP 8088 / TCP 8099)
-- [ ] Test Connection + title field mapping
-- [ ] Local overlay + WebSocket themes
-- [ ] Session export CSV/JSON via vMix workflow (operator history export shipped in Phase 5)
+- [x] `VmixOutputAdapter` (HTTP 8088 / TCP 8099)
+- [x] Test Connection + title field mapping + SetText URL-encoded
+- [x] Optional auto OverlayInputN In/Out on Send / Clear Live
+- [x] Local overlay HTTP + WebSocket themes (Clean Lower Third, Full Scripture, Minimal, Bilingual)
+- [x] Wire Phase 5 Send Live / Clear Live → OutputController
+- [x] Mock vMix server for Vitest
+- [x] `docs/VMIX_INTEGRATION.md`
+- [x] Session export CSV/JSON (operator history — Phase 5; still available)
 
 ## Phase 7 — Yoruba hardening
 
@@ -102,7 +106,7 @@ Phased delivery. Check items when implemented and verified.
 | docs/BIBLE_DATA.md | Done (Phase 2) |
 | docs/TESTING.md | Done (Phase 1–2) |
 | docs/YORUBA_SUPPORT.md | Deferred (Phase 7) |
-| docs/VMIX_INTEGRATION.md | Deferred (Phase 6) |
+| docs/VMIX_INTEGRATION.md | Done (Phase 6) |
 | docs/TRANSCRIPTION.md | Done (Phase 4) |
 | docs/SECURITY.md | Stub (Phase 1) |
 | THIRD_PARTY_LICENSES.md | Done (Phase 2) |

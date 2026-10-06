@@ -8,6 +8,11 @@ export function SettingsPanel() {
   const settings = useAppStore((s) => s.settings);
   const updateSettings = useAppStore((s) => s.updateSettings);
   const translations = useAppStore((s) => s.translations);
+  const status = useAppStore((s) => s.status);
+  const vmixDetail = useAppStore((s) => s.vmixDetail);
+  const overlayUrl = useAppStore((s) => s.overlayUrl);
+  const testVmixConnection = useAppStore((s) => s.testVmixConnection);
+  const connectVmix = useAppStore((s) => s.connectVmix);
 
   const patch = (partial: Partial<AppSettings>) => {
     void updateSettings({ ...settings, ...partial });
@@ -17,7 +22,9 @@ export function SettingsPanel() {
     <Card className="bg-slate-950/40">
       <CardHeader className="border-b border-border/40">
         <CardTitle>Settings</CardTitle>
-        <p className="text-xs text-muted-foreground">Persisted in app userData. More sections arrive in later phases.</p>
+        <p className="text-xs text-muted-foreground">
+          Persisted in app userData. VMIX + OUTPUT control Send Live / Clear Live destinations.
+        </p>
       </CardHeader>
       <CardContent className="grid gap-4 pt-4 md:grid-cols-3">
         <div className="space-y-1">
@@ -104,6 +111,218 @@ export function SettingsPanel() {
             Automatic mode takes detections ≥ this threshold straight to LIVE.
           </p>
         </div>
+
+        <div className="md:col-span-3 border-t border-border/40 pt-3">
+          <h3 className="mb-2 text-sm font-semibold tracking-wide text-foreground">VMIX</h3>
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="space-y-1">
+              <Label htmlFor="vmix-enabled">Enabled</Label>
+              <select
+                id="vmix-enabled"
+                className="flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                value={settings.vmix.enabled ? "yes" : "no"}
+                onChange={(e) =>
+                  patch({
+                    vmix: { ...settings.vmix, enabled: e.target.value === "yes" },
+                  })
+                }
+              >
+                <option value="no">Disabled</option>
+                <option value="yes">Enabled</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="vmix-host">Host</Label>
+              <input
+                id="vmix-host"
+                className="flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                value={settings.vmix.host}
+                onChange={(e) => patch({ vmix: { ...settings.vmix, host: e.target.value } })}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="vmix-http">HTTP port</Label>
+              <input
+                id="vmix-http"
+                type="number"
+                className="flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                value={settings.vmix.httpPort}
+                onChange={(e) =>
+                  patch({ vmix: { ...settings.vmix, httpPort: Number(e.target.value) } })
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="vmix-tcp">TCP port</Label>
+              <input
+                id="vmix-tcp"
+                type="number"
+                className="flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                value={settings.vmix.tcpPort}
+                onChange={(e) =>
+                  patch({ vmix: { ...settings.vmix, tcpPort: Number(e.target.value) } })
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="vmix-input">Title input</Label>
+              <input
+                id="vmix-input"
+                className="flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                value={settings.vmix.inputName}
+                onChange={(e) =>
+                  patch({ vmix: { ...settings.vmix, inputName: e.target.value } })
+                }
+                placeholder="Scripture"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="vmix-ref">Reference field</Label>
+              <input
+                id="vmix-ref"
+                className="flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                value={settings.vmix.fieldReference}
+                onChange={(e) =>
+                  patch({ vmix: { ...settings.vmix, fieldReference: e.target.value } })
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="vmix-verse">Verse field</Label>
+              <input
+                id="vmix-verse"
+                className="flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                value={settings.vmix.fieldVerse}
+                onChange={(e) =>
+                  patch({ vmix: { ...settings.vmix, fieldVerse: e.target.value } })
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="vmix-tr">Translation field</Label>
+              <input
+                id="vmix-tr"
+                className="flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                value={settings.vmix.fieldTranslation}
+                onChange={(e) =>
+                  patch({ vmix: { ...settings.vmix, fieldTranslation: e.target.value } })
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="vmix-auto">Auto show/hide overlay</Label>
+              <select
+                id="vmix-auto"
+                className="flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                value={settings.vmix.autoOverlay ? "yes" : "no"}
+                onChange={(e) =>
+                  patch({
+                    vmix: { ...settings.vmix, autoOverlay: e.target.value === "yes" },
+                  })
+                }
+              >
+                <option value="no">Off</option>
+                <option value="yes">On (OverlayInputN In/Out)</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="vmix-ch">Overlay channel (1–4)</Label>
+              <input
+                id="vmix-ch"
+                type="number"
+                min={1}
+                max={4}
+                className="flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                value={settings.vmix.overlayChannel}
+                onChange={(e) =>
+                  patch({
+                    vmix: { ...settings.vmix, overlayChannel: Number(e.target.value) },
+                  })
+                }
+              />
+            </div>
+            <div className="flex flex-wrap items-end gap-2 md:col-span-3">
+              <Button size="sm" variant="outline" onClick={() => void testVmixConnection()}>
+                Test Connection
+              </Button>
+              <Button size="sm" onClick={() => void connectVmix()} disabled={!settings.vmix.enabled}>
+                Connect
+              </Button>
+              <span className="text-xs text-muted-foreground">
+                Status: {status?.vmixStatus ?? "disconnected"}
+                {vmixDetail ? ` — ${vmixDetail}` : ""}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="md:col-span-3 border-t border-border/40 pt-3">
+          <h3 className="mb-2 text-sm font-semibold tracking-wide text-foreground">OUTPUT · Browser overlay</h3>
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="space-y-1">
+              <Label htmlFor="ov-enabled">Overlay server</Label>
+              <select
+                id="ov-enabled"
+                className="flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                value={settings.output.overlayEnabled ? "yes" : "no"}
+                onChange={(e) =>
+                  patch({
+                    output: {
+                      ...settings.output,
+                      overlayEnabled: e.target.value === "yes",
+                    },
+                  })
+                }
+              >
+                <option value="yes">Enabled</option>
+                <option value="no">Disabled</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="ov-port">Port</Label>
+              <input
+                id="ov-port"
+                type="number"
+                className="flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                value={settings.output.overlayPort}
+                onChange={(e) =>
+                  patch({
+                    output: { ...settings.output, overlayPort: Number(e.target.value) },
+                  })
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="ov-theme">Theme</Label>
+              <select
+                id="ov-theme"
+                className="flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                value={settings.output.overlayTheme}
+                onChange={(e) =>
+                  patch({
+                    output: {
+                      ...settings.output,
+                      overlayTheme: e.target.value as AppSettings["output"]["overlayTheme"],
+                    },
+                  })
+                }
+              >
+                <option value="clean-lower-third">Clean Lower Third</option>
+                <option value="full-scripture">Full Scripture</option>
+                <option value="minimal">Minimal</option>
+                <option value="bilingual">Bilingual</option>
+              </select>
+            </div>
+            <div className="md:col-span-3 text-xs text-muted-foreground">
+              Point a vMix Browser input at{" "}
+              <code className="rounded bg-black/40 px-1 py-0.5 text-[11px] text-sky-200">
+                {overlayUrl ?? `http://127.0.0.1:${settings.output.overlayPort}/overlay`}
+              </code>{" "}
+              (transparent background). See docs/VMIX_INTEGRATION.md.
+            </div>
+          </div>
+        </div>
+
         <div className="md:col-span-3">
           <Button
             variant="outline"

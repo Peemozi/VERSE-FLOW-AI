@@ -40,6 +40,24 @@ export const AppSettingsSchema = z.object({
     httpPort: z.number().int().positive(),
     tcpPort: z.number().int().positive(),
     enabled: z.boolean(),
+    /** vMix input name or number for the title */
+    inputName: z.string().min(1),
+    fieldReference: z.string().min(1),
+    fieldVerse: z.string().min(1),
+    fieldTranslation: z.string().min(1),
+    /** Auto OverlayInputN In/Out on Send Live / Clear Live */
+    autoOverlay: z.boolean(),
+    overlayChannel: z.number().int().min(1).max(4),
+  }),
+  output: z.object({
+    overlayEnabled: z.boolean(),
+    overlayPort: z.number().int().positive(),
+    overlayTheme: z.enum([
+      "clean-lower-third",
+      "full-scripture",
+      "minimal",
+      "bilingual",
+    ]),
   }),
   appearance: z.object({
     theme: z.enum(["dark", "light"]),
@@ -136,9 +154,48 @@ export const AppStatusSchema = z.object({
   sttStatus: SttStatusSchema,
   vmixStatus: z.enum(["disconnected", "connected", "error"]),
   sttCredentialsConfigured: z.boolean(),
+  overlayUrl: z.string().optional(),
+  overlayListening: z.boolean().optional(),
 });
 
 export type AppStatus = z.infer<typeof AppStatusSchema>;
+
+export const OverlayThemeSchema = z.enum([
+  "clean-lower-third",
+  "full-scripture",
+  "minimal",
+  "bilingual",
+]);
+export type OverlayTheme = z.infer<typeof OverlayThemeSchema>;
+
+export const LiveScripturePayloadSchema = z.object({
+  referenceLabel: z.string(),
+  verseText: z.string(),
+  translationId: z.string(),
+  bookId: z.string().optional(),
+  chapter: z.number().optional(),
+  verse: z.number().optional(),
+  endVerse: z.number().optional(),
+  secondaryReferenceLabel: z.string().optional(),
+  secondaryVerseText: z.string().optional(),
+  secondaryTranslationId: z.string().optional(),
+});
+export type LiveScripturePayloadDto = z.infer<typeof LiveScripturePayloadSchema>;
+
+export const VmixConnectionTestResultSchema = z.object({
+  ok: z.boolean(),
+  detail: z.string(),
+  httpOk: z.boolean().optional(),
+  tcpOk: z.boolean().optional(),
+});
+export type VmixConnectionTestResult = z.infer<typeof VmixConnectionTestResultSchema>;
+
+export const OutputSendResultSchema = z.object({
+  vmixOk: z.boolean(),
+  overlayOk: z.boolean(),
+  errors: z.array(z.string()),
+});
+export type OutputSendResult = z.infer<typeof OutputSendResultSchema>;
 
 export const DetectionEventSchema = z.object({
   id: z.string(),

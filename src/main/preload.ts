@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from "electron";
 import type {
   AppSettings,
   HistoryExportFormat,
+  LiveScripturePayloadDto,
   RecordOperatorEventRequest,
   SimulateTranscriptRequest,
   SttStatusDto,
@@ -47,12 +48,23 @@ const api: VerseFlowApi = {
   exportHistory: (format: HistoryExportFormat) =>
     ipcRenderer.invoke(IpcChannels.HISTORY_EXPORT, format),
   endHistorySession: () => ipcRenderer.invoke(IpcChannels.HISTORY_END_SESSION),
+  testVmixConnection: () => ipcRenderer.invoke(IpcChannels.VMIX_TEST_CONNECTION),
+  connectVmix: () => ipcRenderer.invoke(IpcChannels.VMIX_CONNECT),
+  sendLiveOutput: (payload: LiveScripturePayloadDto) =>
+    ipcRenderer.invoke(IpcChannels.OUTPUT_SEND_LIVE, payload),
+  clearLiveOutput: () => ipcRenderer.invoke(IpcChannels.OUTPUT_CLEAR_LIVE),
+  getOverlayInfo: () => ipcRenderer.invoke(IpcChannels.OUTPUT_GET_OVERLAY_INFO),
   onSttStatus: (cb) =>
     subscribe<{ status: SttStatusDto; detail?: string }>(IpcEvents.STT_STATUS, cb),
   onSttTranscript: (cb) => subscribe<TranscriptEventDto>(IpcEvents.STT_TRANSCRIPT, cb),
   onSttDetections: (cb) => subscribe<SttDetectionsEvent>(IpcEvents.STT_DETECTIONS, cb),
   onSttError: (cb) =>
     subscribe<{ message: string; retryable: boolean }>(IpcEvents.STT_ERROR, cb),
+  onVmixStatus: (cb) =>
+    subscribe<{ status: "disconnected" | "connected" | "error"; detail?: string }>(
+      IpcEvents.VMIX_STATUS,
+      cb,
+    ),
   log: (level, message) => ipcRenderer.invoke(IpcChannels.LOG_WRITE, level, message),
 };
 

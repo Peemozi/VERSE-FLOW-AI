@@ -94,4 +94,13 @@ Canonical book IDs are language-neutral (`GEN`, `JHN`, `1CO`, …). Verses store
 
 ## Phase boundary
 
-Phases 1–5 ship foundation through operator workflow (Preview/Queue/Live/History, assisted vs automatic, shortcuts, history export). vMix and packaging are later — see [ROADMAP.md](./ROADMAP.md).
+Phases 1–6 ship foundation through operator workflow and vMix/browser overlay. Yoruba hardening, quotation/semantic detection, and packaging are later — see [ROADMAP.md](./ROADMAP.md).
+
+## Output adapters (Phase 6)
+
+- `BroadcastOutput` — swappable interface (`sendLive` / `clearLive` / `testConnection`)
+- `VmixOutputAdapter` — HTTP SetText + optional OverlayInputN; TCP health/reconnect
+- `OverlayServer` — local `http://127.0.0.1:<port>/overlay` + WebSocket state
+- `OutputController` — fans Send Live / Clear Live to both; status events to renderer
+
+See [VMIX_INTEGRATION.md](./VMIX_INTEGRATION.md).

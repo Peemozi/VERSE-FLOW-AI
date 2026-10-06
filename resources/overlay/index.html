@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VerseFlow Overlay</title>
+    <link rel="stylesheet" href="./overlay.css" />
+  </head>
+  <body>
+    <div id="root" class="theme-clean-lower-third" aria-live="polite">
+      <div id="card" class="card hidden">
+        <div class="ref-row">
+          <span id="reference" class="reference"></span>
+          <span id="translation" class="translation"></span>
+        </div>
+        <p id="verse" class="verse"></p>
+        <div id="bilingual" class="bilingual hidden">
+          <div class="ref-row secondary">
+            <span id="secondary-reference" class="reference"></span>
+            <span id="secondary-translation" class="translation"></span>
+          </div>
+          <p id="secondary-verse" class="verse secondary-verse"></p>
+        </div>
+        <div id="pages" class="pages hidden"></div>
+      </div>
+    </div>
+    <script src="./overlay.js"></script>
+  </body>
+</html>

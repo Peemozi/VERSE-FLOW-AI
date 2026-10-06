@@ -54,7 +54,7 @@ export function StatusBar() {
         </div>
         <div>
           <h1 className="font-display text-lg font-semibold tracking-tight text-foreground">{APP_NAME}</h1>
-          <p className="text-xs text-muted-foreground">Operator dashboard · Phase 1–5</p>
+          <p className="text-xs text-muted-foreground">Operator dashboard · Phase 1–6</p>
         </div>
       </div>
       <div className="flex flex-wrap items-center justify-end gap-2">
@@ -63,6 +63,16 @@ export function StatusBar() {
           tone={status?.bibleReady ? "ok" : "warn"}
         />
         <StatusPill label={`STT ${sttStatus}`} tone={sttTone(sttStatus)} />
+        <StatusPill
+          label={`vMix ${status?.vmixStatus ?? "disconnected"}`}
+          tone={
+            status?.vmixStatus === "connected"
+              ? "ok"
+              : status?.vmixStatus === "error"
+                ? "warn"
+                : "off"
+          }
+        />
         <StatusPill label={mode} tone={mode === "automatic" ? "warn" : "ok"} />
         {live ? <StatusPill label="LIVE" tone="live" /> : null}
         <Button size="sm" variant="destructive" onClick={() => void clearLive()}>

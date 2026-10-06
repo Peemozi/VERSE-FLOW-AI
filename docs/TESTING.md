@@ -9,7 +9,7 @@ npm run lint        # ESLint
 npm run build       # main + renderer production build
 ```
 
-## Current coverage (Phase 1–5)
+## Current coverage (Phase 1–6)
 
 - Settings Zod schema + defaults
 - App name constant
@@ -27,6 +27,8 @@ npm run build       # main + renderer production build
 - Unavailable provider without credentials
 - Auto-live decision, operator shortcuts, history CSV/JSON export
 - SessionHistoryRepository operator events
+- Mock vMix HTTP/TCP: SetText URL encoding, title fields, Overlay In/Out
+- OverlayServer: serve `/overlay`, LIVE state API, bilingual theme payload
 
 ## Later
 

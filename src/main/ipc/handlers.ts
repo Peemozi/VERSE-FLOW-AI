@@ -5,6 +5,7 @@ import {
   AppSettingsSchema,
   HistoryExportFormatSchema,
   LanguageModeSchema,
+  LiveScripturePayloadSchema,
   RecordOperatorEventSchema,
   SimulateTranscriptRequestSchema,
 } from "../../shared/schemas";
@@ -18,6 +19,7 @@ import { getLiveSession } from "../transcription/LiveSessionController";
 import { GoogleCloudSpeechProvider } from "../transcription/GoogleCloudSpeechProvider";
 import { getSessionHistory } from "../sessions";
 import { exportHistoryCsv, exportHistoryJson } from "../../shared/operator/workflow";
+import { getOutputController } from "../vmix/OutputController";
 
 function bibleRepo(): BibleRepository {
   const db = getDatabase();
@@ -31,29 +33,47 @@ const SttStartSchema = z.object({
   sampleRateHertz: z.number().int().positive().optional(),
 });
 
+function mapVmixUiStatus(
+  status: string,
+): "disconnected" | "connected" | "error" {
+  if (status === "connected") return "connected";
+  if (status === "error" || status === "reconnecting") return "error";
+  return "disconnected";
+}
+
 export function registerIpcHandlers(): void {
   ipcMain.handle(IpcChannels.APP_GET_STATUS, () => {
     const repo = bibleRepo();
     const translations = repo.listTranslations();
     const bibleReady = translations.some((t) => t.verseCount > 0);
     const session = getLiveSession();
+    const output = getOutputController();
     return {
       appName: APP_NAME,
       version: APP_VERSION,
       dbReady: true,
       bibleReady,
       sttStatus: session.getStatus(),
-      vmixStatus: "disconnected" as const,
+      vmixStatus: mapVmixUiStatus(output.getVmixStatus()),
       sttCredentialsConfigured: GoogleCloudSpeechProvider.credentialsConfigured(),
+      overlayUrl: output.getOverlayUrl(),
+      overlayListening: output.isOverlayListening(),
     };
   });
 
   ipcMain.handle(IpcChannels.SETTINGS_GET, () => loadSettings());
 
-  ipcMain.handle(IpcChannels.SETTINGS_SET, (_event, payload: unknown) => {
+  ipcMain.handle(IpcChannels.SETTINGS_SET, async (_event, payload: unknown) => {
     const parsed = AppSettingsSchema.parse(payload);
     const saved = saveSettings(parsed);
     resetScriptureDetector();
+    try {
+      await getOutputController().applySettings(saved);
+    } catch (err) {
+      logger.warn("Failed to apply output settings", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
     return saved;
   });
 
@@ -159,6 +179,35 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(IpcChannels.HISTORY_END_SESSION, () => {
     getSessionHistory().endSession();
+  });
+
+  ipcMain.handle(IpcChannels.VMIX_TEST_CONNECTION, async () => {
+    return getOutputController().testConnection();
+  });
+
+  ipcMain.handle(IpcChannels.VMIX_CONNECT, async () => {
+    const output = getOutputController();
+    await output.connectVmix();
+    return { status: mapVmixUiStatus(output.getVmixStatus()) };
+  });
+
+  ipcMain.handle(IpcChannels.OUTPUT_SEND_LIVE, async (_event, payload: unknown) => {
+    const live = LiveScripturePayloadSchema.parse(payload);
+    return getOutputController().sendLive(live);
+  });
+
+  ipcMain.handle(IpcChannels.OUTPUT_CLEAR_LIVE, async () => {
+    return getOutputController().clearLive();
+  });
+
+  ipcMain.handle(IpcChannels.OUTPUT_GET_OVERLAY_INFO, () => {
+    const output = getOutputController();
+    const settings = loadSettings();
+    return {
+      url: output.getOverlayUrl(),
+      listening: output.isOverlayListening(),
+      theme: settings.output.overlayTheme,
+    };
   });
 
   ipcMain.handle(

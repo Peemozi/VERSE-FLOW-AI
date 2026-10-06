@@ -52,6 +52,8 @@ interface AppState {
   noInputWarning: boolean;
   isListening: boolean;
   history: OperatorEventDto[];
+  vmixDetail: string | null;
+  overlayUrl: string | null;
   bootstrap: () => Promise<void>;
   refreshStatus: () => Promise<void>;
   updateSettings: (settings: AppSettings) => Promise<void>;
@@ -83,6 +85,8 @@ interface AppState {
   exportHistory: (format: "csv" | "json") => Promise<void>;
   endHistorySession: () => Promise<void>;
   focusBibleSearch: () => void;
+  testVmixConnection: () => Promise<void>;
+  connectVmix: () => Promise<void>;
 }
 
 function hasApi(): boolean {
@@ -109,6 +113,17 @@ async function recordHistorySafe(
   } catch {
     // history must never break operator flow
   }
+}
+
+function verseToLivePayload(verse: BibleVerseDto) {
+  return {
+    referenceLabel: verse.referenceLabel,
+    verseText: verse.originalText,
+    translationId: verse.translationId,
+    bookId: verse.bookId,
+    chapter: verse.chapter,
+    verse: verse.verse,
+  };
 }
 
 function downloadTextFile(filename: string, content: string, mime: string): void {
@@ -151,6 +166,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   noInputWarning: false,
   isListening: false,
   history: [],
+  vmixDetail: null,
+  overlayUrl: null,
 
   bootstrap: async () => {
     if (!hasApi()) {
@@ -216,6 +233,14 @@ export const useAppStore = create<AppState>((set, get) => ({
         window.verseflow.onSttError(({ message }) => {
           set({ sttDetail: message });
         }),
+        window.verseflow.onVmixStatus(({ status: vs, detail }) => {
+          set((s) => ({
+            status: s.status
+              ? { ...s.status, vmixStatus: vs, overlayUrl: s.status.overlayUrl }
+              : s.status,
+            vmixDetail: detail ?? null,
+          }));
+        }),
       ];
 
       set({
@@ -226,10 +251,17 @@ export const useAppStore = create<AppState>((set, get) => ({
         selectedTranslationId: selected,
         sttCapabilities: caps,
         sttStatus: status.sttStatus,
+        overlayUrl: status.overlayUrl ?? null,
         loading: false,
       });
       await get().refreshAudioDevices();
       await get().refreshHistory();
+      try {
+        const overlay = await window.verseflow.getOverlayInfo();
+        set({ overlayUrl: overlay.url });
+      } catch {
+        /* optional */
+      }
     } catch (err) {
       set({
         loading: false,
@@ -393,6 +425,16 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { preview } = get();
     if (!preview) return;
     set({ live: preview });
+    if (hasApi()) {
+      try {
+        const result = await window.verseflow.sendLiveOutput(verseToLivePayload(preview));
+        if (result.errors.length) {
+          set({ error: result.errors.join("; ") });
+        }
+      } catch (err) {
+        set({ error: err instanceof Error ? err.message : String(err) });
+      }
+    }
     await recordHistorySafe({
       kind: "live",
       bookId: preview.bookId,
@@ -407,6 +449,16 @@ export const useAppStore = create<AppState>((set, get) => ({
   clearLive: async () => {
     const { live } = get();
     set({ live: null });
+    if (hasApi()) {
+      try {
+        const result = await window.verseflow.clearLiveOutput();
+        if (result.errors.length) {
+          set({ error: result.errors.join("; ") });
+        }
+      } catch (err) {
+        set({ error: err instanceof Error ? err.message : String(err) });
+      }
+    }
     await recordHistorySafe({
       kind: "clear_live",
       bookId: live?.bookId ?? null,
@@ -442,6 +494,16 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (queue.length === 0) return;
     const [head, ...rest] = queue;
     set({ queue: rest, live: head, preview: head });
+    if (hasApi()) {
+      try {
+        const result = await window.verseflow.sendLiveOutput(verseToLivePayload(head));
+        if (result.errors.length) {
+          set({ error: result.errors.join("; ") });
+        }
+      } catch (err) {
+        set({ error: err instanceof Error ? err.message : String(err) });
+      }
+    }
     await recordHistorySafe({
       kind: "live",
       bookId: head.bookId,
@@ -634,5 +696,40 @@ export const useAppStore = create<AppState>((set, get) => ({
     queueMicrotask(() => {
       document.getElementById("bible-search-input")?.focus();
     });
+  },
+
+  testVmixConnection: async () => {
+    if (!hasApi()) return;
+    try {
+      const result = await window.verseflow.testVmixConnection();
+      set((s) => ({
+        vmixDetail: result.detail,
+        status: s.status
+          ? {
+              ...s.status,
+              vmixStatus: result.ok ? "connected" : "error",
+            }
+          : s.status,
+        error: result.ok ? null : result.detail,
+      }));
+    } catch (err) {
+      set({
+        vmixDetail: err instanceof Error ? err.message : String(err),
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  },
+
+  connectVmix: async () => {
+    if (!hasApi()) return;
+    try {
+      const result = await window.verseflow.connectVmix();
+      set((s) => ({
+        status: s.status ? { ...s.status, vmixStatus: result.status as "disconnected" | "connected" | "error" } : s.status,
+        vmixDetail: result.detail ?? null,
+      }));
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : String(err) });
+    }
   },
 }));

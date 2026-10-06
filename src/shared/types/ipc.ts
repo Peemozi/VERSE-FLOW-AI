@@ -6,7 +6,9 @@ import type {
   DetectionEventDto,
   HistoryExportFormatSchema,
   LanguageMode,
+  LiveScripturePayloadDto,
   OperatorEventDto,
+  OutputSendResult,
   RecordOperatorEventRequest,
   SimulateTranscriptRequest,
   SimulateTranscriptResponse,
@@ -15,6 +17,7 @@ import type {
   TranscriptEventDto,
   TranslationInfo,
   VerseRef,
+  VmixConnectionTestResult,
 } from "../schemas";
 import type { z } from "zod";
 
@@ -37,6 +40,11 @@ export const IpcChannels = {
   HISTORY_RECORD: "history:record",
   HISTORY_EXPORT: "history:export",
   HISTORY_END_SESSION: "history:endSession",
+  VMIX_TEST_CONNECTION: "vmix:testConnection",
+  VMIX_CONNECT: "vmix:connect",
+  OUTPUT_SEND_LIVE: "output:sendLive",
+  OUTPUT_CLEAR_LIVE: "output:clearLive",
+  OUTPUT_GET_OVERLAY_INFO: "output:getOverlayInfo",
   LOG_WRITE: "log:write",
 } as const;
 
@@ -48,6 +56,7 @@ export const IpcEvents = {
   STT_TRANSCRIPT: "stt:event:transcript",
   STT_DETECTIONS: "stt:event:detections",
   STT_ERROR: "stt:event:error",
+  VMIX_STATUS: "vmix:event:status",
 } as const;
 
 export interface BibleBookInfo {
@@ -110,10 +119,18 @@ export interface VerseFlowApi {
   recordHistory: (event: RecordOperatorEventRequest) => Promise<OperatorEventDto>;
   exportHistory: (format: HistoryExportFormat) => Promise<{ filename: string; content: string }>;
   endHistorySession: () => Promise<void>;
+  testVmixConnection: () => Promise<VmixConnectionTestResult>;
+  connectVmix: () => Promise<{ status: string; detail?: string }>;
+  sendLiveOutput: (payload: LiveScripturePayloadDto) => Promise<OutputSendResult>;
+  clearLiveOutput: () => Promise<OutputSendResult>;
+  getOverlayInfo: () => Promise<{ url: string; listening: boolean; theme: string }>;
   onSttStatus: (cb: (payload: { status: SttStatusDto; detail?: string }) => void) => () => void;
   onSttTranscript: (cb: (payload: TranscriptEventDto) => void) => () => void;
   onSttDetections: (cb: (payload: SttDetectionsEvent) => void) => () => void;
   onSttError: (cb: (payload: { message: string; retryable: boolean }) => void) => () => void;
+  onVmixStatus: (
+    cb: (payload: { status: "disconnected" | "connected" | "error"; detail?: string }) => void,
+  ) => () => void;
   log: (level: "debug" | "info" | "warn" | "error", message: string) => Promise<void>;
 }
 
