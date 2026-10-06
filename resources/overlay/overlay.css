@@ -1,0 +1,198 @@
+/* Transparent for vMix Browser input */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent !important;
+  overflow: hidden;
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  color: #f8fafc;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.card {
+  position: absolute;
+  box-sizing: border-box;
+  opacity: 0;
+  transform: translateY(12px);
+  transition:
+    opacity 0.35s ease,
+    transform 0.35s ease;
+  pointer-events: none;
+}
+
+.card.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.card.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.reference {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.translation {
+  opacity: 0.7;
+  font-size: 0.75em;
+  font-weight: 500;
+  margin-left: 0.6em;
+}
+
+.verse {
+  margin: 0.35em 0 0;
+  line-height: 1.35;
+  white-space: pre-wrap;
+}
+
+.bilingual.hidden,
+.pages.hidden {
+  display: none;
+}
+
+.page-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.35);
+  margin-right: 4px;
+}
+
+.page-dot.active {
+  background: #fff;
+}
+
+/* —— Clean Lower Third —— */
+.theme-clean-lower-third .card {
+  left: 4%;
+  right: 4%;
+  bottom: 8%;
+  padding: 1rem 1.4rem 1.1rem;
+  background: linear-gradient(90deg, rgba(8, 18, 36, 0.88), rgba(12, 28, 52, 0.72));
+  border-left: 4px solid #38bdf8;
+  border-radius: 0 6px 6px 0;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+}
+
+.theme-clean-lower-third .reference {
+  font-size: 1.35rem;
+  color: #7dd3fc;
+}
+
+.theme-clean-lower-third .verse {
+  font-size: 1.55rem;
+  max-width: 92%;
+}
+
+/* —— Full Scripture —— */
+.theme-full-scripture .card {
+  left: 8%;
+  right: 8%;
+  top: 18%;
+  bottom: 18%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 2.5rem 3rem;
+  background: rgba(4, 10, 22, 0.82);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 12px;
+  text-align: center;
+}
+
+.theme-full-scripture .reference {
+  font-size: 1.6rem;
+  color: #fbbf24;
+}
+
+.theme-full-scripture .verse {
+  font-size: 2.1rem;
+  margin-top: 1rem;
+}
+
+.theme-full-scripture .pages {
+  margin-top: 1.25rem;
+  display: flex;
+  justify-content: center;
+}
+
+.theme-full-scripture .pages:not(.hidden) {
+  display: flex;
+}
+
+/* —— Minimal —— */
+.theme-minimal .card {
+  left: 6%;
+  right: 6%;
+  bottom: 10%;
+  padding: 0.6rem 0;
+  background: transparent;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.85);
+}
+
+.theme-minimal .reference {
+  font-size: 1.1rem;
+  color: #e2e8f0;
+  font-weight: 600;
+}
+
+.theme-minimal .verse {
+  font-size: 1.35rem;
+  font-weight: 500;
+}
+
+.theme-minimal .translation {
+  opacity: 0.55;
+}
+
+/* —— Bilingual —— */
+.theme-bilingual .card {
+  left: 5%;
+  right: 5%;
+  bottom: 7%;
+  padding: 1.1rem 1.5rem;
+  background: rgba(8, 15, 30, 0.9);
+  border-radius: 8px;
+  border-top: 3px solid #34d399;
+}
+
+.theme-bilingual .reference {
+  font-size: 1.2rem;
+  color: #6ee7b7;
+}
+
+.theme-bilingual .verse {
+  font-size: 1.4rem;
+}
+
+.theme-bilingual .secondary {
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.theme-bilingual .secondary .reference {
+  color: #93c5fd;
+}
+
+.theme-bilingual .secondary-verse {
+  font-size: 1.25rem;
+  opacity: 0.95;
+}
+
+.theme-bilingual #bilingual:not(.hidden) {
+  display: block;
+}
